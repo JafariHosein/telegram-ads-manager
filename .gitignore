@@ -1,0 +1,25 @@
+# Virtual Env
+.venv/
+
+# Pycharm
+.idea/
+
+# Git
+.git/
+
+# __pycache__ Files
+bot/__pycache__
+config/__pycache__
+database/__pycache__
+database/crud/__pycache__
+database/models/__pycache__
+downloader_handlers/__pycache__
+customer_handlers/__pycache__
+utils/__pycache__
+__pycache__
+
+# Editor File
+.vscode
+
+# Logs
+*.log
