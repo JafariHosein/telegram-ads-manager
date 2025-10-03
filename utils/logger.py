@@ -48,5 +48,3 @@ class Logger:
         if Logger.logger.isEnabledFor(Logger.NOTICE_LEVEL):
             Logger.logger._log(Logger.NOTICE_LEVEL, message, args, **kwargs)
 
-
-Logger.notice("test")
