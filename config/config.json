@@ -1,0 +1,16 @@
+{
+  "downloader_bot": {
+    "bot_token": ""
+  },
+  "customer_bot": {
+    "bot_token": ""
+  },
+  "database": {
+    "host": "localhost",
+    "port": "5432",
+    "name": "timo",
+    "username": "postgres",
+    "password": "root123"
+  },
+  "owner_chat_id": -1
+}

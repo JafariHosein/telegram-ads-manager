@@ -1,0 +1,95 @@
+from typing import Sequence
+
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Session
+from sqlalchemy import delete, select, update, func, cast
+
+from database.models.account import Account, AccountRole, AccountStatus
+from database.crud.manager import UpdateBalanceType
+
+
+class CRUDAccount:
+
+    @staticmethod
+    def create(db: Session, username: str, password: str, status: AccountStatus = AccountStatus.ACTIVE,
+               role: AccountRole = AccountRole.DOWNLOADER, ad_ids: list[int] = None, linked_username: dict = None, balance: int = 0, ):
+        db.add(Account(balance=balance, username=username, password=password, status=status, role=role, ad_ids=ad_ids,
+                       linked_username=linked_username))
+        db.commit()
+
+    @staticmethod
+    def delete(db: Session, id: int):
+        statement = delete(Account).where(Account.id == id)
+        db.execute(statement)
+        db.commit()
+
+    @staticmethod
+    def get_all(db: Session) -> Sequence[Account]:
+        statement = select(Account)
+        return db.execute(statement).scalars().all()
+
+    @staticmethod
+    def get_by_id(db: Session, id: int) -> Account | None:
+        statement = select(Account).where(Account.id == id)
+        return db.execute(statement).scalars().first()
+
+    @staticmethod
+    def get_by_role(db: Session, role: AccountRole) -> Sequence[Account]:
+        statement = select(Account).where(Account.role == role)
+        return db.execute(statement).scalars().all()
+
+    @staticmethod
+    def update_balance(db: Session, id: int, update_type: UpdateBalanceType, new_balance: int):
+        if update_type == UpdateBalanceType.NORMAL:
+            statement = update(Account).where(Account.id == id).values(balance=new_balance)
+        elif update_type == UpdateBalanceType.DECREMENT:
+            statement = update(Account).where(Account.id == id).values(balance=Account.balance - new_balance)
+        else:
+            statement = update(Account).where(Account.id == id).values(balance=Account.balance + new_balance)
+
+        db.execute(statement)
+        db.commit()
+
+    @staticmethod
+    def update_password(db: Session, id: int, new_password: str):
+        statement = update(Account).where(Account.id == id).values(password=new_password)
+        db.execute(statement)
+        db.commit()
+
+    @staticmethod
+    def update_status(db: Session, id: int, new_status: AccountStatus):
+        statement = update(Account).where(Account.id == id).values(status=new_status)
+        db.execute(statement)
+        db.commit()
+
+    @staticmethod
+    def add_id(db: Session, id: int, ad_id: int):
+        statement = update(Account).where(Account.id == id).values(ad_ids=func.array_append(Account.ad_ids, ad_id))
+        db.execute(statement)
+        db.commit()
+
+    @staticmethod
+    def remove_id(db: Session, id: int, ad_id: int):
+        statement = update(Account).where(Account.id == id).values(ad_ids=func.array_remove(Account.ad_ids, ad_id))
+        db.execute(statement)
+        db.commit()
+
+    @staticmethod
+    def add_linked_username(db: Session, id: int, new_linked_username: dict):
+        statement = update(Account).where(Account.id == id).values(linked_username=Account.linked_username.op("||")(cast(new_linked_username, JSONB)))
+        db.execute(statement)
+        db.commit()
+
+    @staticmethod
+    def remove_linked_username(db: Session, id: int, linked_username_key: str):
+        statement = update(Account).where(Account.id == id).values(linked_username=Account.linked_username - linked_username_key)
+        db.execute(statement)
+        db.commit()
+
+    @staticmethod
+    def login(db: Session, username: str, password: str) -> bool:
+        statement = select(Account).where(Account.username == username, Account.password == password)
+        result = db.execute(statement).scalars().first()
+        if result:
+            return True
+        return False
