@@ -13,6 +13,10 @@ class RegisterRequestStatus(enum.Enum):
     APPROVED = "approved"
     REJECTED = "rejected"
 
+class RegisterRequestStatusFarsi(enum.Enum):
+    PENDING = "🕓 در انتظار تأیید"
+    APPROVED = "✅ تأیید شده"
+    REJECTED = "❌ رد شده"
 
 class RegisterRequest(Base):
     __tablename__ = "register_requests"

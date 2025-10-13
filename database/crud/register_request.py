@@ -37,6 +37,11 @@ class CRUDRegisterRequest:
         return db.execute(statement).scalars().all()
 
     @staticmethod
+    def get_by_status_and_downloader_user_id(db: Session, downloader_user_id: int, status: RegisterRequestStatus) -> Sequence[RegisterRequest]:
+        statement = select(RegisterRequest).where(RegisterRequest.status == status, RegisterRequest.downloader_user_id == downloader_user_id)
+        return db.execute(statement).scalars().all()
+
+    @staticmethod
     def update_status(db: Session, id: int, new_status: RegisterRequestStatus):
         statement = update(RegisterRequest).where(RegisterRequest.id == id).values(status=new_status)
         db.execute(statement)

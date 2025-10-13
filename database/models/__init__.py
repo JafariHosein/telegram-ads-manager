@@ -8,7 +8,7 @@ from .downloader_user import DownloaderUser
 from .force_join import ForceJoin
 from .link import Link
 from .payout_request import PayoutRequest, PayoutRequestStatus, PayoutRequestType, PayoutRequestDestinationType
-from .register_request import RegisterRequest, RegisterRequestStatus
+from .register_request import RegisterRequest, RegisterRequestStatus, RegisterRequestStatusFarsi
 from .session import Session
 from .setting import Setting
 from .transfer_request import TransferRequestStatus, TransferRequest

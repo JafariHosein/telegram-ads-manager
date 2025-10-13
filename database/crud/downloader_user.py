@@ -37,19 +37,19 @@ class CRUDDownloaderUser:
         return db.execute(statement).scalars().first()
 
     @staticmethod
-    def update_state(db: Session, id: int, new_state: str):
-        statement = update(DownloaderUser).where(DownloaderUser.id == id).values(state=new_state)
+    def update_state(db: Session, chat_id: str, new_state: str):
+        statement = update(DownloaderUser).where(DownloaderUser.chat_id == chat_id).values(state=new_state)
         db.execute(statement)
         db.commit()
 
     @staticmethod
-    def update_bot_last_message_id(db: Session, id: int, new_bot_lst_msg_id: int):
-        statement = update(DownloaderUser).where(DownloaderUser.id == id).values(bot_last_message_id=new_bot_lst_msg_id)
+    def update_bot_last_message_id(db: Session, chat_id: str, new_bot_lst_msg_id: int):
+        statement = update(DownloaderUser).where(DownloaderUser.chat_id == chat_id).values(bot_last_message_id=new_bot_lst_msg_id)
         db.execute(statement)
         db.commit()
 
     @staticmethod
-    def update_state_data(db: Session, id: int, new_state_data: str):
-        statement = update(DownloaderUser).where(DownloaderUser.id == id).values(state_data=new_state_data)
+    def update_state_data(db: Session, chat_id: str, new_state_data: str):
+        statement = update(DownloaderUser).where(DownloaderUser.chat_id == chat_id).values(state_data=new_state_data)
         db.execute(statement)
         db.commit()

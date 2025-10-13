@@ -12,10 +12,14 @@ class CRUDAccount:
 
     @staticmethod
     def create(db: Session, username: str, password: str, status: AccountStatus = AccountStatus.ACTIVE,
-               role: AccountRole = AccountRole.DOWNLOADER, ad_ids: list[int] = None, linked_username: dict = None, balance: int = 0, ):
-        db.add(Account(balance=balance, username=username, password=password, status=status, role=role, ad_ids=ad_ids,
-                       linked_username=linked_username))
+               role: AccountRole = AccountRole.DOWNLOADER, ad_ids: list[int] = None, linked_username: dict = None, balance: int = 0) -> int:
+        new_account = Account(balance=balance, username=username, password=password, status=status, role=role, ad_ids=ad_ids,
+                              linked_username=linked_username)
+        db.add(new_account)
         db.commit()
+        db.refresh(new_account)
+
+        return new_account.id
 
     @staticmethod
     def delete(db: Session, id: int):

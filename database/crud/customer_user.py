@@ -3,7 +3,7 @@ from typing import Sequence
 from sqlalchemy.orm import Session
 from sqlalchemy import delete, select, update
 
-from database.models.customer_user import CustomerUser
+from database.models.customer_user import CustomerUser, CustomerUserRole
 from database.crud.manager import UpdateBalanceType
 
 
@@ -11,9 +11,9 @@ class CRUDCustomerUser:
 
     @staticmethod
     def create(db: Session, chat_id: str, state: str = None, state_data: str = None,
-               balance: int = 0, bot_last_message_id: int = None):
+               balance: int = 0, bot_last_message_id: int = None, role: CustomerUserRole = CustomerUserRole.CUSTOMER):
         db.add(CustomerUser(chat_id=chat_id, state=state, state_data=state_data,
-                            balance=balance, bot_last_message_id=bot_last_message_id))
+                            balance=balance, bot_last_message_id=bot_last_message_id, role=role))
         db.commit()
 
     @staticmethod
@@ -64,5 +64,11 @@ class CRUDCustomerUser:
     @staticmethod
     def update_state_data(db: Session, id: int, new_state_data: str):
         statement = update(CustomerUser).where(CustomerUser.id == id).values(state_data=new_state_data)
+        db.execute(statement)
+        db.commit()
+
+    @staticmethod
+    def update_role(db: Session, id: int, new_role: CustomerUserRole):
+        statement = update(CustomerUser).where(CustomerUser.id == id).values(role=new_role)
         db.execute(statement)
         db.commit()
