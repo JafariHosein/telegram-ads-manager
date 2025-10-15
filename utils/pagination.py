@@ -10,48 +10,45 @@ from bot.keyboard import DownloaderInlineButtons
 class Pagination:
 
     @staticmethod
-    def paginate(data: Sequence, callback_data: str, properties: list, buttons_callback: list, show_number: int = 20, page: int = 1) -> List:
+    def paginate(data: Sequence, callback_data: str, properties: list, buttons_callback: list, show_number: int = 20, page: int = 1, count: int = 2) -> List:
         """
         example properties = [["username","یوزرنیم"],["password","رمز عبور"],...]
         example buttons_callback = [PreviousPage, NextPage, Return]
         """
+        buttons = []
+        if len(data) == 0:
+            message_text = "🛑 چیزی برای نمایش وجود ندارد."
+            buttons.append([InlineKeyboardButton(DownloaderInlineButtons.words["Return"],
+                                                 callback_data=buttons_callback[2])])
+            markup = InlineKeyboardMarkup(buttons)
+            return [markup, message_text]
+
         page_count = math.ceil(len(data) / show_number)
 
         message_text = "📄 صفحه " + str(page) + " " + "از " + str(page_count)
         message_text += "\n\n"
 
-        buttons = []
-
-        for item in range((page * show_number) - show_number, page * show_number, 2):
+        for item in range((page * show_number) - show_number, page * show_number, count):
             if item > len(data) - 1:
                 break
 
-            message_text += "<blockquote>"
-            for my_property in properties:
-                prop_name = my_property[0]
-                prop_value = getattr(data[item], my_property[0], None)
-                message_text += my_property[1] + " : " + f"{Pagination.__format_value(prop_name, prop_value)}" + "\n"
+            # Generate MessageText
+            temp_btns = []
+            for number in range(0, count):
+                if len(data) <= item + number:
+                    break
 
-            item_id = getattr(data[item], properties[0][0], None)
-            try:
-                item_id_2 = getattr(data[item + 1], properties[0][0], None)
-                buttons.append([InlineKeyboardButton(str(item_id), callback_data=f"{callback_data}*{item_id}"),
-                                InlineKeyboardButton(str(item_id_2), callback_data=f"{callback_data}*{item_id_2}")])
-
-            except:
-                buttons.append([InlineKeyboardButton(str(item_id), callback_data=f"{callback_data}*{item_id}")])
-
-            message_text += "</blockquote>" + "\n"
-            try:
-                item_id_2 = getattr(data[item + 1], properties[0][0], None)
+                item_id = getattr(data[item + number], properties[0][0], None)
                 message_text += "<blockquote>"
                 for my_property in properties:
                     prop_name = my_property[0]
-                    prop_value = getattr(data[item + 1], my_property[0], None)
+                    prop_value = getattr(data[item + number], my_property[0], None)
                     message_text += my_property[1] + " : " + f"{Pagination.__format_value(prop_name, prop_value)}" + "\n"
                 message_text += "</blockquote>" + "\n"
-            except:
-                pass
+
+                temp_btns.append(InlineKeyboardButton(str(item_id),callback_data=f"{callback_data}*{item_id}"))
+
+            buttons.append(temp_btns)
 
         if len(data) > show_number:
             if page_count == page:  # Last Page
@@ -67,9 +64,8 @@ class Pagination:
         buttons.append([InlineKeyboardButton(DownloaderInlineButtons.words["Return"],
                                              callback_data=buttons_callback[2])])
 
-        message_text +=  "👇 بر روی گزینه مورد نظر کلیک کنید"
+        message_text += "👇 بر روی گزینه مورد نظر کلیک کنید"
         markup = InlineKeyboardMarkup(buttons)
-
 
         return [markup, message_text]
 

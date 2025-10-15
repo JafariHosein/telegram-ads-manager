@@ -4,15 +4,16 @@ from sqlalchemy.orm import Session
 from sqlalchemy import delete, select, update
 
 from database.models.downloader_user import DownloaderUser
+from database.crud.manager import UpdateType
 
 
 class CRUDDownloaderUser:
 
     @staticmethod
-    def create(db: Session, chat_id: str, state: str = None, state_data: str = None,
-               bot_last_message_id: int = None):
+    def create(db: Session, chat_id: str, state: str = "", state_data: str = "",
+               bot_last_message_id: int = None, can_use_bot=True, captcha_failures: int = 0):
         db.add(DownloaderUser(chat_id=chat_id, state=state, state_data=state_data,
-                              bot_last_message_id=bot_last_message_id))
+                              bot_last_message_id=bot_last_message_id, can_use_bot=can_use_bot, captcha_failures=captcha_failures))
         db.commit()
 
     @staticmethod
@@ -51,5 +52,23 @@ class CRUDDownloaderUser:
     @staticmethod
     def update_state_data(db: Session, chat_id: str, new_state_data: str):
         statement = update(DownloaderUser).where(DownloaderUser.chat_id == chat_id).values(state_data=new_state_data)
+        db.execute(statement)
+        db.commit()
+
+    @staticmethod
+    def update_can_use_bot(db: Session, chat_id: str, new_can_use_bot: bool):
+        statement = update(DownloaderUser).where(DownloaderUser.chat_id == chat_id).values(can_use_bot=new_can_use_bot)
+        db.execute(statement)
+        db.commit()
+
+    @staticmethod
+    def update_captcha_failures(db: Session, chat_id: str, update_type: UpdateType, value: int):
+        if update_type == UpdateType.NORMAL:
+            statement = update(DownloaderUser).where(DownloaderUser.chat_id == chat_id).values(captcha_failures=value)
+        elif update_type == UpdateType.INCREMENT:
+            statement = update(DownloaderUser).where(DownloaderUser.chat_id == chat_id).values(captcha_failures=DownloaderUser.captcha_failures + value)
+        else:
+            statement = update(DownloaderUser).where(DownloaderUser.chat_id == chat_id).values(captcha_failures=DownloaderUser.captcha_failures - value)
+
         db.execute(statement)
         db.commit()

@@ -32,7 +32,7 @@ class Database:
             session.close()
 
 
-class UpdateBalanceType(enum.Enum):
+class UpdateType(enum.Enum):
     INCREMENT = "increment"
     DECREMENT = "decrement"
     NORMAL = "normal"

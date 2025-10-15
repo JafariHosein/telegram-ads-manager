@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import delete, select, update, func, cast
 
 from database.models.account import Account, AccountRole, AccountStatus
-from database.crud.manager import UpdateBalanceType
+from database.crud.manager import UpdateType
 
 
 class CRUDAccount:
@@ -43,10 +43,15 @@ class CRUDAccount:
         return db.execute(statement).scalars().all()
 
     @staticmethod
-    def update_balance(db: Session, id: int, update_type: UpdateBalanceType, new_balance: int):
-        if update_type == UpdateBalanceType.NORMAL:
+    def username_exist(db: Session, username: str) -> bool:
+        statement = select(Account).where(Account.username == username)
+        return bool(db.execute(statement).scalars().first())
+
+    @staticmethod
+    def update_balance(db: Session, id: int, update_type: UpdateType, new_balance: int):
+        if update_type == UpdateType.NORMAL:
             statement = update(Account).where(Account.id == id).values(balance=new_balance)
-        elif update_type == UpdateBalanceType.DECREMENT:
+        elif update_type == UpdateType.DECREMENT:
             statement = update(Account).where(Account.id == id).values(balance=Account.balance - new_balance)
         else:
             statement = update(Account).where(Account.id == id).values(balance=Account.balance + new_balance)
@@ -91,9 +96,11 @@ class CRUDAccount:
         db.commit()
 
     @staticmethod
-    def login(db: Session, username: str, password: str) -> bool:
-        statement = select(Account).where(Account.username == username, Account.password == password)
+    def login(db: Session, username: str, password: str) -> tuple[bool, int]:
+        statement = select(Account).where(Account.username == username)
         result = db.execute(statement).scalars().first()
         if result:
-            return True
-        return False
+            import bcrypt
+            is_correct = bcrypt.checkpw(password.encode("utf-8"), result.password.encode("utf-8"))
+            return is_correct, result.id
+        return False, None

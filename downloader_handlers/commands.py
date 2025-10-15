@@ -3,13 +3,14 @@ from telegram.constants import ParseMode
 from telegram.ext import CallbackContext, ApplicationHandlerStop
 
 from bot.keyboard import DownloaderReplyButtons, DownloaderInlineButtons
-from database import CRUDDownloaderUser, Database, CRUDSession, CRUDAccount, AccountRole, Decorators, DecoratorType
+from database import CRUDDownloaderUser, Database, CRUDSession, CRUDAccount, AccountRole, DownloaderDecorator
 from utils import DownloaderState, Password
 from config import Config
 
 
 class StartCommand:
     @staticmethod
+    @DownloaderDecorator.callback()
     async def start(update: Update, context: CallbackContext, returned: bool = False) -> None:
         user_chat_id = update.effective_user.id
 
@@ -71,11 +72,26 @@ class StartCommand:
             account_role = account.role
 
         if account_role == AccountRole.DOWNLOADER:
-            print("Hello My downloader")
+            message_text = "سلام کاربر عزیز، خوش آمدید! 👋" + "\n\n"
+            message_text += "توضیح منو : " + "\n" + "<blockquote>"
+            message_text += "- " + "🟢 تبلیغات فعال" + " : " + "در این بخش می‌توانید فهرست تبلیغات فعال را مشاهده کرده و لینک اختصاصی هر تبلیغ را دریافت کنید." + "\n\n"
+            message_text += "- " + "👤 حساب کاربری" + " : " + "در این قسمت اطلاعات کامل حساب شما، از جمله لینک‌های اختصاصی، حساب بانکی، درخواست‌ها، فهرست کانال‌ها و ربات‌های ثبت‌شده نمایش داده می‌شود." + "\n\n"
+            message_text += "- " + "🔁 انتقال" + " : " + "در این قسمت می‌توانید بخشی از موجودی خود را به حساب کاربری دیگری در ربات انتقال دهید." + "\n\n"
+            message_text += "- " + "💵 برداشت" + " : " + "از این بخش می‌توانید درخواست برداشت وجه (چه به صورت ریالی و چه به صورت ترون) ثبت کنید." + "\n\n"
+            message_text += "- " + "📞 ارتباط با پشتیبانی" + " : " + "از این قسمت می‌توانید آیدی پشتیبان‌ها را مشاهده کرده و جهت رفع مشکلات یا سوالات خود با آن‌ها ارتباط بگیرید." + "\n\n"
+            message_text += "- 💰 قیمت لحظه ایی : " + "در این بخش قیمت لحظه‌ای ارز ترون (TRX) را مشاهده کنید." + "\n\n"
+            message_text += "</blockquote>"
+
+            if returned:
+                await context.bot.delete_message(chat_id=user_chat_id, message_id=update.effective_message.message_id)
+
+            msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=DownloaderReplyButtons.downloader, parse_mode=ParseMode.HTML)
+            with Database.get_session() as session:
+                CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
         elif account_role == AccountRole.ADMIN:
 
             message_text = "سلام ادمین عزیز، خوش آمدید! 👋" + "\n\n"
-            message_text += "توضیح امکانات : " +"\n"+ "<blockquote>"
+            message_text += "توضیح امکانات : " + "\n" + "<blockquote>"
             message_text += "- 📢 تبلیغات : " + "ثبت تبلیغ، ویرایش، بررسی وضعیت و مدیریت کامل تبلیغات." + "\n\n"
             message_text += "- 📊 آمار : " + "مشاهده آمار روزانه، هفتگی، ماهانه و کل ربات." + "\n\n"
             message_text += "- 🔗 مدیریت لینک : " + "سنجش کیفیت لینک‌ها، مشاهده اطلاعات لینک، باطل کردن و حذف ممبر از لینک." + "\n\n"
@@ -83,8 +99,6 @@ class StartCommand:
             message_text += "- 👥 کاربران : " + "مشاهده اطلاعات کاربران، ارسال پیام و فورارد همگانی." + "\n\n"
             message_text += "- 💼 اکانت ها : " + "مشاهده و مدیریت اکانت‌ها، ویرایش و حذف آنها." + "\n\n"
             message_text += "- 🛠️ تنظیمات : " + "تنظیمات کامل ربات برای بخش‌های مختلف، جوین اجباری، ترون اتوماتیک و…" + "\n\n"
-            message_text += "- 💰 قیمت لحظه ایی : " + "مشاهده قیمت لحظه‌ای ترون." + "\n\n"
-            message_text += "- 💳 لیست موجودی ها : " + "مشاهده لیست موجودی کاربران با فیلترهای مختلف." + "\n\n"
             message_text += "</blockquote>"
 
             if returned:
@@ -94,7 +108,7 @@ class StartCommand:
                 CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
 
     @staticmethod
-    @Decorators.run_if_last_message(DecoratorType.DOWNLOADER)
+    @DownloaderDecorator.callback()
     async def return_to_start(update: Update, context: CallbackContext) -> None:
         await StartCommand.start(update, context, returned=True)
 
@@ -102,13 +116,30 @@ class StartCommand:
 class AdminCommand:
 
     @staticmethod
-    @Decorators.require_login(False)
+    @DownloaderDecorator.callback(login_require=False)
     async def admin(update: Update, context: CallbackContext) -> None:
         user_chat_id = update.effective_user.id
         owner_chat_id = Config.owner_chat_id
 
         if user_chat_id == owner_chat_id:
+
+
+
+
             with Database.get_session() as session:
+
+                # Check is Created Account Before
+                result = CRUDAccount.username_exist(db=session, username=str(update.effective_user.id))
+                if result:
+                    message_text = "⭕️" + "این دستور برای این اکانت تلگرام کار نمیکند"
+                    message_text += "\n\n" + "با این اکانت ثبت نام موفق ثبت شده است."
+
+                    msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, parse_mode=ParseMode.HTML,
+                                                         reply_markup=DownloaderInlineButtons.return_to_start)
+
+                    CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
+                    raise ApplicationHandlerStop()
+
                 password = Password.generate_password()
                 account_id = CRUDAccount.create(session, str(user_chat_id), Password.hash_password(password), role=AccountRole.ADMIN)
                 user_id = CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id)).id

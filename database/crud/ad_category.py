@@ -40,3 +40,15 @@ class CRUDAdCategory:
     def get_by_title(db: Session, title: str) -> AdCategory | None:
         statement = select(AdCategory).where(AdCategory.title == title)
         return db.execute(statement).scalars().first()
+
+    @staticmethod
+    def update_title(db: Session, id: int, new_title: str):
+        statement = update(AdCategory).where(AdCategory.id == id).values(title=new_title)
+        db.execute(statement)
+        db.commit()
+
+    @staticmethod
+    def update_min_rate(db: Session, id: int, new_min_rate: int):
+        statement = update(AdCategory).where(AdCategory.id == id).values(min_rate=new_min_rate)
+        db.execute(statement)
+        db.commit()

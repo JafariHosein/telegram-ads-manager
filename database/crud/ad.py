@@ -9,13 +9,18 @@ from database.models.ad import Ad, AdLinkType, AdChannelType
 class CRUDAd:
 
     @staticmethod
-    def create(db: Session, customer_user_id: int, channel_chat_id: str, channel_name: str, channel_type: AdChannelType,
+    def create(db: Session, channel_chat_id: str, channel_name: str, channel_type: AdChannelType,
                description: str, rate: int, capacity: int, auto_complete: bool, category_title: str,
-               prize: dict = None, is_active: bool = True, channel_username: str = None):
-        db.add(Ad(customer_user_id=customer_user_id, channel_chat_id=channel_chat_id, channel_name=channel_name, channel_type=channel_type,
-                  description=description, rate=rate, capacity=capacity, auto_complete=auto_complete, category_title=category_title,
-                  prize=prize, is_active=is_active, channel_username=channel_username))
+               prize: dict = None, is_active: bool = True, channel_username: str = None, is_verified: bool = False, ad_link_type: AdLinkType = AdLinkType.NORMAL,
+               customer_user_id: int = None) -> int:
+        new_ad = Ad(customer_user_id=customer_user_id, channel_chat_id=channel_chat_id, channel_name=channel_name, channel_type=channel_type,
+                    description=description, rate=rate, capacity=capacity, auto_complete=auto_complete, category_title=category_title,
+                    prize=prize, is_active=is_active, channel_username=channel_username, is_verified=is_verified, link_type=ad_link_type)
+        db.add(new_ad)
         db.commit()
+        db.refresh(new_ad)
+
+        return new_ad.id
 
     @staticmethod
     def delete(db: Session, id: int):
@@ -44,8 +49,18 @@ class CRUDAd:
         return db.execute(statement).scalars().all()
 
     @staticmethod
-    def get_by_is_active(db: Session, is_active: bool) -> Sequence[Ad]:
-        statement = select(Ad).where(Ad.is_active == is_active)
+    def get_by_is_active(db: Session) -> Sequence[Ad]:
+        statement = select(Ad).where(Ad.is_active == True, Ad.is_completed == False)
+        return db.execute(statement).scalars().all()
+
+    @staticmethod
+    def get_by_is_verified(db: Session) -> Sequence[Ad]:
+        statement = select(Ad).where(Ad.is_verified == True)
+        return db.execute(statement).scalars().all()
+
+    @staticmethod
+    def get_by_is_not_verified(db: Session) -> Sequence[Ad]:
+        statement = select(Ad).where(Ad.is_completed == True, Ad.is_verified == False)
         return db.execute(statement).scalars().all()
 
     @staticmethod
@@ -69,6 +84,18 @@ class CRUDAd:
     @staticmethod
     def update_is_active(db: Session, id: int, is_active: bool):
         statement = update(Ad).where(Ad.id == id).values(is_active=is_active)
+        db.execute(statement)
+        db.commit()
+
+    @staticmethod
+    def update_is_verified(db: Session, id: int, is_verified: bool):
+        statement = update(Ad).where(Ad.id == id).values(is_verified=is_verified)
+        db.execute(statement)
+        db.commit()
+
+    @staticmethod
+    def update_is_completed(db: Session, id: int, is_completed: bool):
+        statement = update(Ad).where(Ad.id == id).values(is_completed=is_completed)
         db.execute(statement)
         db.commit()
 

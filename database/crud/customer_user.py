@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import delete, select, update
 
 from database.models.customer_user import CustomerUser, CustomerUserRole
-from database.crud.manager import UpdateBalanceType
+from database.crud.manager import UpdateType
 
 
 class CRUDCustomerUser:
@@ -38,10 +38,10 @@ class CRUDCustomerUser:
         return db.execute(statement).scalars().first()
 
     @staticmethod
-    def update_balance(db: Session, id: int, balance_type: UpdateBalanceType, new_balance: int):
-        if balance_type == UpdateBalanceType.NORMAL:
+    def update_balance(db: Session, id: int, balance_type: UpdateType, new_balance: int):
+        if balance_type == UpdateType.NORMAL:
             statement = update(CustomerUser).where(CustomerUser.id == id).values(balance=new_balance)
-        elif balance_type == UpdateBalanceType.INCREMENT:
+        elif balance_type == UpdateType.INCREMENT:
             statement = update(CustomerUser).where(CustomerUser.id == id).values(balance=CustomerUser.balance + new_balance)
         else:
             statement = update(CustomerUser).where(CustomerUser.id == id).values(balance=CustomerUser.balance - new_balance)

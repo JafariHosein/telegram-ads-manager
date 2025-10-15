@@ -17,6 +17,11 @@ class Regex:
         pattern = rf"(?<![A-Za-z0-9_]){re.escape(target)}(?![A-Za-z0-9_])"
         return re.search(pattern, text) is not None
 
+    @staticmethod
+    def is_prize_text(text: str) -> bool:
+        pattern = re.compile(r'^(?:(?:[1-9]|10)\s*->\s*\d+\s*(?:\r?\n|$)){1,10}$')
+        return bool(pattern.fullmatch(text.strip()))
+
 
 class Password:
 
@@ -28,16 +33,13 @@ class Password:
         upper = string.ascii_uppercase
         digits = string.digits
 
-        symbols = "!@#$%^&*()-_+="
-
         password_chars = [
             secrets.choice(lower),
             secrets.choice(upper),
-            secrets.choice(digits),
-            secrets.choice(symbols),
+            secrets.choice(digits)
         ]
 
-        all_chars = lower + upper + digits + symbols
+        all_chars = lower + upper + digits
 
         for _ in range(length - 4):
             password_chars.append(secrets.choice(all_chars))

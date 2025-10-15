@@ -6,14 +6,13 @@ from telegram.ext import CallbackContext, ApplicationHandlerStop
 import database
 from bot.keyboard import DownloaderInlineButtons
 from utils import Pagination, Password, DownloaderState
-from database import Database, DecoratorType, Decorators, AccountRole, CRUDDownloaderUser, CRUDRegisterRequest, RegisterRequestStatus, RegisterRequestStatusFarsi, CRUDAccount, CRUDSession
+from database import Database, DownloaderDecorator, AccountRole, CRUDDownloaderUser, CRUDRegisterRequest, RegisterRequestStatus, RegisterRequestStatusFarsi, CRUDAccount, CRUDSession
 
 
 class RequestsMessage:
 
     @staticmethod
-    @Decorators.require_login(True)
-    @Decorators.require_role(DecoratorType.DOWNLOADER, AccountRole.ADMIN)
+    @DownloaderDecorator.message(login_require=True, role_require=AccountRole.ADMIN)
     async def requests(update: Update, context: CallbackContext, returned: bool = False):
         user_chat_id = update.effective_chat.id
 
@@ -37,9 +36,7 @@ class RequestsMessage:
         raise ApplicationHandlerStop()
 
     @staticmethod
-    @Decorators.run_if_last_message(DecoratorType.DOWNLOADER)
-    @Decorators.require_login(True)
-    @Decorators.require_role(DecoratorType.DOWNLOADER, AccountRole.ADMIN)
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
     async def register_requests(update: Update, context: CallbackContext):
         user_chat_id = update.effective_user.id
         with Database.get_session() as session:
@@ -53,12 +50,10 @@ class RequestsMessage:
             await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.register_requests, parse_mode=ParseMode.HTML)
 
     @staticmethod
-    @Decorators.run_if_last_message(DecoratorType.DOWNLOADER)
-    @Decorators.require_login(True)
-    @Decorators.require_role(DecoratorType.DOWNLOADER, AccountRole.ADMIN)
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
     async def pending_register_requests(update: Update, context: CallbackContext):
         user_chat_id = update.effective_user.id
-        callback_data = "ShowThisRegisterRequest"
+        callback_data = "ShowThisPendingRegisterRequest"
         buttons_callback = ["GoToPreviousPendingRegisterRequests", "GoToNextPendingRegisterRequests", "ReturnTo2RegisterRequests"]
         properties = [["id", "- شماره درخواست"], ["downloader_user_id", "- آیدی کاربر"], ["created_at", "- تاریخ ثبت"]]
 
@@ -72,19 +67,71 @@ class RequestsMessage:
 
             if "GoToPreviousPendingRegisterRequests" in update.callback_query.data:
                 page_number = int(update.callback_query.data.split("*")[1])
-                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, page_number)
+                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, page_number, 3)
             elif "GoToNextPendingRegisterRequests" in update.callback_query.data:
                 page_number = int(update.callback_query.data.split("*")[1])
-                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, page_number)
+                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, page_number, 3)
             else:
-                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, 1)
+                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, 1, 3)
 
         await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=markup, parse_mode=ParseMode.HTML)
 
     @staticmethod
-    @Decorators.run_if_last_message(DecoratorType.DOWNLOADER)
-    @Decorators.require_login(True)
-    @Decorators.require_role(DecoratorType.DOWNLOADER, AccountRole.ADMIN)
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
+    async def approved_register_requests(update: Update, context: CallbackContext):
+        user_chat_id = update.effective_user.id
+        callback_data = "ShowThisApprovedRegisterRequest"
+        buttons_callback = ["GoToPreviousApprovedRegisterRequests", "GoToNextApprovedRegisterRequests", "ReturnTo2RegisterRequests"]
+        properties = [["id", "- شماره درخواست"], ["downloader_user_id", "- آیدی کاربر"], ["created_at", "- تاریخ ثبت"]]
+
+        if callback_data in update.callback_query.data:
+            register_request_id = int(update.callback_query.data.split("*")[1])
+            await RequestsMessage.__show_register_request(update, context, register_request_id, "ReturnToApprovedRegisterRequests")
+            return
+
+        with Database.get_session() as session:
+            data = CRUDRegisterRequest.get_by_status(session, RegisterRequestStatus.APPROVED)
+
+            if "GoToPreviousApprovedRegisterRequests" in update.callback_query.data:
+                page_number = int(update.callback_query.data.split("*")[1])
+                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, page_number, 3)
+            elif "GoToNextApprovedRegisterRequests" in update.callback_query.data:
+                page_number = int(update.callback_query.data.split("*")[1])
+                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, page_number, 3)
+            else:
+                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, 1, 3)
+
+        await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=markup, parse_mode=ParseMode.HTML)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
+    async def rejected_register_requests(update: Update, context: CallbackContext):
+        user_chat_id = update.effective_user.id
+        callback_data = "ShowThisRejectedRegisterRequest"
+        buttons_callback = ["GoToPreviousRejectedRegisterRequests", "GoToNextRejectedRegisterRequests", "ReturnTo2RegisterRequests"]
+        properties = [["id", "- شماره درخواست"], ["downloader_user_id", "- آیدی کاربر"], ["created_at", "- تاریخ ثبت"]]
+
+        if callback_data in update.callback_query.data:
+            register_request_id = int(update.callback_query.data.split("*")[1])
+            await RequestsMessage.__show_register_request(update, context, register_request_id, "ReturnToRejectedRegisterRequests")
+            return
+
+        with Database.get_session() as session:
+            data = CRUDRegisterRequest.get_by_status(session, RegisterRequestStatus.REJECTED)
+
+            if "GoToPreviousRejectedRegisterRequests" in update.callback_query.data:
+                page_number = int(update.callback_query.data.split("*")[1])
+                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, page_number, 3)
+            elif "GoToNextRejectedRegisterRequests" in update.callback_query.data:
+                page_number = int(update.callback_query.data.split("*")[1])
+                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, page_number, 3)
+            else:
+                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, 1, 3)
+
+        await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=markup, parse_mode=ParseMode.HTML)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
     async def __show_register_request(update: Update, context: CallbackContext, register_request_id: int, return_callback_data: str):
         user_chat_id = update.effective_user.id
         counter = 1
@@ -100,7 +147,9 @@ class RequestsMessage:
                 message_text += "\n" + f"{counter}. {username} - {"ربات" if username_type == "bot" else "کانال"}"
                 counter += 1
 
-            message_text += "\n\n" + "- " + "وضعیت درخواست : " + f"{RegisterRequestStatusFarsi.PENDING.value}" + "\n\n"
+            message_text += "\n\n" + "- " + "وضعیت درخواست : " + f"{RegisterRequestStatusFarsi[RegisterRequestStatus(request.status).name].value}" + "\n\n"
+            if request.status == RegisterRequestStatus.REJECTED:
+                message_text += "- " + "دلیل رد : " + f"{request.reason if request.reason else "ذکر نشده"}" + "\n\n"
 
             shamsi_date = jdatetime.datetime.fromgregorian(datetime=request.created_at)
             shamsi_date = shamsi_date.strftime('%Y/%m/%d ⏰ %H:%M')
@@ -108,39 +157,48 @@ class RequestsMessage:
             message_text += "- " + "تاریخ ثبت :" + shamsi_date + "\n\n"
             message_text += "</blockquote>"
 
-            message_text += "✅ " + "در صورت تأیید، کاربر به عنوان دانلودر شناخته می‌شود و می‌تواند از امکانات ربات استفاده کند."
-            message_text += "\n\n" + "❌ " + "در صورت رد درخواست، کاربر امکان استفاده از ربات را نخواهد داشت. همچنین می‌توانید در صورت تمایل، دلیل رد درخواست را نیز وارد کنید."
+            if request.status == RegisterRequestStatus.PENDING:
+                message_text += "✅ " + "در صورت تأیید، کاربر به عنوان دانلودر شناخته می‌شود و می‌تواند از امکانات ربات استفاده کند."
+                message_text += "\n\n" + "❌ " + "در صورت رد درخواست، کاربر امکان استفاده از ربات را نخواهد داشت. همچنین می‌توانید در صورت تمایل، دلیل رد درخواست را نیز وارد کنید."
 
-            markup = InlineKeyboardMarkup([
-                [InlineKeyboardButton("❌ رد", callback_data=f"RejectThisRegisterRequest*{request.id}"), InlineKeyboardButton("✅ تایید", callback_data=f"ApproveThisRegisterRequest*{request.id}")],
-                [InlineKeyboardButton("🔙 بازگشت", callback_data=return_callback_data)],
-            ])
+                markup = InlineKeyboardMarkup([
+                    [InlineKeyboardButton("❌ رد", callback_data=f"RejectThisRegisterRequest*{request.id}"), InlineKeyboardButton("✅ تایید", callback_data=f"ApproveThisRegisterRequest*{request.id}")],
+                    [InlineKeyboardButton("⛔ افزودن به بلک لیست", callback_data=f"AddThisUserIDToBlackList*{request.id}")],
+                    [InlineKeyboardButton("🔙 بازگشت", callback_data=return_callback_data)],
+                ])
+            else:
+                markup = InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔙 بازگشت", callback_data=return_callback_data)],
+                ])
 
         await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=markup, parse_mode=ParseMode.HTML)
 
     @staticmethod
-    @Decorators.run_if_last_message(DecoratorType.DOWNLOADER)
-    @Decorators.require_login(True)
-    @Decorators.require_role(DecoratorType.DOWNLOADER, AccountRole.ADMIN)
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
     async def change_register_request_status(update: Update, context: CallbackContext):
         user_chat_id = update.effective_user.id
 
         if update.callback_query:
             register_request_id = int(update.callback_query.data.split("*")[1])
+            if "AddThisUserIDToBlackList" in update.callback_query.data:
+                with Database.get_session() as session:
+                    request = CRUDRegisterRequest.get_by_id(session, register_request_id)
+                    user = CRUDDownloaderUser.get_by_id(session, request.downloader_user_id)
+                    CRUDDownloaderUser.update_can_use_bot(session, user.chat_id, False)
+                    CRUDRegisterRequest.update_status(session, register_request_id, RegisterRequestStatus.REJECTED)
+
+                    message_text = "✅ درخواست با شماره " + str(register_request_id) + " با موفقیت رد شد."
+                    message_text += "\n\n" + "- کاربر به بلک لیست اضافه شد"
+                    await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_pending_register_requests)
+
             if "ApproveThisRegisterRequest" in update.callback_query.data:
+
                 with Database.get_session() as session:
                     user_id = CRUDRegisterRequest.get_by_id(session, register_request_id).downloader_user_id
                     user = CRUDDownloaderUser.get_by_id(session, user_id)
                     password = Password.generate_password()
 
-                    linked_username = {}
-                    for username in str(user.state_data).split(";"):
-                        if username.endswith("-bot"):
-                            fixed_username = username[:-len("-bot")]
-                            linked_username[fixed_username] = "bot"
-                        else:
-                            fixed_username = username[:-len("-channel")]
-                            linked_username[fixed_username] = "channel"
+                    linked_username = CRUDRegisterRequest.get_by_id(session, register_request_id).linked_username
 
                     CRUDRegisterRequest.update_status(session, register_request_id, RegisterRequestStatus.APPROVED)
                     account_id = CRUDAccount.create(session, user.chat_id, Password.hash_password(password), linked_username=linked_username)
@@ -156,8 +214,11 @@ class RequestsMessage:
                     message_text += "\n\n" + "🚀 هم‌اکنون به‌صورت خودکار وارد حساب خود شده‌اید و نیازی به انجام هیچ کاری نیست."
                     message_text += "\n\n" + "✅ برای ادامه، روی دکمه‌ی «متوجه شدم» کلیک کنید."
 
-                    msg = await context.bot.send_message(chat_id=user.chat_id, text=message_text, parse_mode=ParseMode.HTML, reply_markup=DownloaderInlineButtons.i_saved_my_password)
-                    CRUDDownloaderUser.update_bot_last_message_id(session, user.chat_id, msg.id)
+                    try:
+                        msg = await context.bot.send_message(chat_id=user.chat_id, text=message_text, parse_mode=ParseMode.HTML, reply_markup=DownloaderInlineButtons.i_saved_my_password)
+                        CRUDDownloaderUser.update_bot_last_message_id(session, user.chat_id, msg.id)
+                    except:
+                        pass
 
                     message_text = "✅ درخواست با شماره " + str(register_request_id) + " با موفقیت تایید شد."
                     message_text += "\n\n" + "- اعلان به کاربر درخواست دهنده ارسال شد"
@@ -178,10 +239,8 @@ class RequestsMessage:
 
                 await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=markup)
 
-
-
-
             elif "SkipReasonForRejectedRegisterRequest" in update.callback_query.data:
+
                 with Database.get_session() as session:
                     # Change Admin State
                     CRUDDownloaderUser.update_state(session, str(user_chat_id), DownloaderState.START)
@@ -192,9 +251,11 @@ class RequestsMessage:
 
                     message_text = "⭕️ " + "کاربر گرامی، متأسفانه درخواست ثبت‌نام شما رد شد."
                     message_text += "\n\n" + "هیچ دلیلی برای این رد شدن از سوی مدیریت ثبت نشده است."
-
-                    msg = await context.bot.send_message(chat_id=user.chat_id, text=message_text, parse_mode=ParseMode.HTML, reply_markup=DownloaderInlineButtons.return_to_start)
-                    CRUDDownloaderUser.update_bot_last_message_id(session, user.chat_id, msg.id)
+                    try:
+                        msg = await context.bot.send_message(chat_id=user.chat_id, text=message_text, parse_mode=ParseMode.HTML, reply_markup=DownloaderInlineButtons.return_to_start)
+                        CRUDDownloaderUser.update_bot_last_message_id(session, user.chat_id, msg.id)
+                    except:
+                        pass
 
                     message_text = "✅ درخواست با شماره " + str(register_request_id) + " با موفقیت رد شد."
                     message_text += "\n\n" + "- اعلان به کاربر درخواست دهنده ارسال شد"
@@ -216,8 +277,11 @@ class RequestsMessage:
                 message_text += "\n\n" + "دلیل رد شدن درخواست : "
                 message_text += "\n" + "<blockquote>" + reason + "</blockquote>"
 
-                msg = await context.bot.send_message(chat_id=user.chat_id, text=message_text, parse_mode=ParseMode.HTML, reply_markup=DownloaderInlineButtons.return_to_start)
-                CRUDDownloaderUser.update_bot_last_message_id(session, user.chat_id, msg.id)
+                try:
+                    msg = await context.bot.send_message(chat_id=user.chat_id, text=message_text, parse_mode=ParseMode.HTML, reply_markup=DownloaderInlineButtons.return_to_start)
+                    CRUDDownloaderUser.update_bot_last_message_id(session, user.chat_id, msg.id)
+                except:
+                    pass
 
                 message_text = "✅ درخواست با شماره " + str(register_request_id) + " با موفقیت رد شد."
                 message_text += "\n\n" + "- اعلان به کاربر درخواست دهنده ارسال شد"
@@ -225,31 +289,33 @@ class RequestsMessage:
                 CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
 
     @staticmethod
-    @Decorators.run_if_last_message(DecoratorType.DOWNLOADER)
-    @Decorators.require_login(True)
-    @Decorators.require_role(DecoratorType.DOWNLOADER, AccountRole.ADMIN)
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
     async def return_to_requests(update: Update, context: CallbackContext):
         await RequestsMessage.requests(update, context, returned=True)
 
     @staticmethod
-    @Decorators.run_if_last_message(DecoratorType.DOWNLOADER)
-    @Decorators.require_login(True)
-    @Decorators.require_role(DecoratorType.DOWNLOADER, AccountRole.ADMIN)
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
     async def return_to_pending_register_requests(update: Update, context: CallbackContext):
         await RequestsMessage.pending_register_requests(update, context)
 
     @staticmethod
-    @Decorators.run_if_last_message(DecoratorType.DOWNLOADER)
-    @Decorators.require_login(True)
-    @Decorators.require_role(DecoratorType.DOWNLOADER, AccountRole.ADMIN)
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
+    async def return_to_approved_register_requests(update: Update, context: CallbackContext):
+        await RequestsMessage.approved_register_requests(update, context)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
+    async def return_to_rejected_register_requests(update: Update, context: CallbackContext):
+        await RequestsMessage.rejected_register_requests(update, context)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
     async def return_to_show_register_request(update: Update, context: CallbackContext):
         register_request_id = int(update.callback_query.data.split("*")[1])
         return_callback = "ReturnToPendingRegisterRequests"
         await RequestsMessage.__show_register_request(update, context, register_request_id, return_callback)
 
     @staticmethod
-    @Decorators.run_if_last_message(DecoratorType.DOWNLOADER)
-    @Decorators.require_login(True)
-    @Decorators.require_role(DecoratorType.DOWNLOADER, AccountRole.ADMIN)
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
     async def return_to_register_requests(update: Update, context: CallbackContext):
         await RequestsMessage.register_requests(update, context)

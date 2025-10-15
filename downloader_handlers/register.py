@@ -1,8 +1,8 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.constants import ParseMode
+from telegram.constants import ParseMode, ReactionEmoji
 from telegram.ext import CallbackContext, ApplicationHandlerStop
 
-from database import Decorators, Database, CRUDDownloaderUser, DecoratorType, CRUDRegisterRequest, RegisterRequestStatus
+from database import DownloaderDecorator, Database, CRUDDownloaderUser, CRUDRegisterRequest, RegisterRequestStatus, CRUDAccount
 from utils import DownloaderState, Regex
 from bot.keyboard import DownloaderInlineButtons
 
@@ -10,13 +10,15 @@ from bot.keyboard import DownloaderInlineButtons
 class RegisterMessage:
 
     @staticmethod
-    @Decorators.require_login(False)
-    async def register(update: Update, context: CallbackContext, returned: bool = False):
+    @DownloaderDecorator.message(login_require=False)
+    async def register(update: Update, context: CallbackContext, returned: bool = False, clear: bool = True):
         user_chat_id = update.effective_chat.id
 
         # Check is Waiting For Accept
         with Database.get_session() as session:
             user = CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id))
+            if not returned and clear:
+                CRUDDownloaderUser.update_state_data(session, str(user_chat_id), "")
             state_data = user.state_data
             pending_requests = CRUDRegisterRequest.get_by_status_and_downloader_user_id(session, user.id, RegisterRequestStatus.PENDING)
 
@@ -35,6 +37,19 @@ class RegisterMessage:
                                                     reply_markup=DownloaderInlineButtons.return_to_start)
 
             raise ApplicationHandlerStop()
+
+        # Check is Created Account Before
+        with Database.get_session() as session:
+            result = CRUDAccount.username_exist(db=session, username=str(update.effective_user.id))
+            if result:
+                message_text = "⭕️" + " کاربر گرامی، شما پیش‌تر با این اکانت تلگرام یک درخواست ثبت‌نام موفق داشته‌اید."
+                message_text += "\n\n" + "امکان ثبت‌نام مجدد وجود ندارد."
+
+                msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, parse_mode=ParseMode.HTML,
+                                                     reply_markup=DownloaderInlineButtons.return_to_start)
+
+                CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
+                raise ApplicationHandlerStop()
 
         markup = DownloaderInlineButtons.register_empty
         message_text = "▫️" + "برای ثبت‌نام، لطفاً فهرست کانال‌ها و ربات‌هایی که مالک آن‌ها هستید را ارسال کنید."
@@ -63,8 +78,7 @@ class RegisterMessage:
         raise ApplicationHandlerStop()
 
     @staticmethod
-    @Decorators.run_if_last_message(DecoratorType.DOWNLOADER)
-    @Decorators.require_login(False)
+    @DownloaderDecorator.callback(login_require=False)
     async def add_username(update: Update, context: CallbackContext):
         user_chat_id = update.effective_chat.id
 
@@ -88,7 +102,6 @@ class RegisterMessage:
             with Database.get_session() as session:
                 state_data = CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id)).state_data
 
-
             if Regex.contains_exact(state_data, text):
                 message_text = "❌ این یوزرنیم را قبلا ثبت کرده اید"
                 message_text += "\n\n" + "- یوزنیم جدید ارسال کنید."
@@ -105,13 +118,10 @@ class RegisterMessage:
                     CRUDDownloaderUser.update_state_data(session, str(user_chat_id), state_data + f"{text}-channel;")
                     CRUDDownloaderUser.update_state(session, str(user_chat_id), DownloaderState.START)
 
-            message_text = "✅ یوزرنیم با موفقیت در لیست شما ثبت شد."
-            msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_register)
-            with Database.get_session() as session:
-                CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
+            await RegisterMessage.register(update, context, returned=False, clear=False)
 
     @staticmethod
-    @Decorators.run_if_last_message(DecoratorType.DOWNLOADER)
+    @DownloaderDecorator.callback()
     async def remove_username(update: Update, context: CallbackContext):
         user_chat_id = update.effective_chat.id
 
@@ -139,23 +149,15 @@ class RegisterMessage:
             username = update.callback_query.data.split("*")[1]
             deleted_content = f"{username};"
 
-            if username.endswith("channel"):
-                fixed_username = username[:-len("-channel")]
-            else:
-                fixed_username = username[:-len("-bot")]
-
             with Database.get_session() as session:
                 state_data = CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id)).state_data
                 state_data = str(state_data).replace(deleted_content, "")
                 CRUDDownloaderUser.update_state_data(session, str(user_chat_id), state_data)
 
-            message_text = "✅ یوزرنیم با آیدی " + fixed_username + " با موفقیت از لیست شما حذف شد."
-            await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text,
-                                                reply_markup=DownloaderInlineButtons.return_to_register)
+            await RegisterMessage.register(update, context, returned=True, clear=False)
 
     @staticmethod
-    @Decorators.run_if_last_message(DecoratorType.DOWNLOADER)
-    @Decorators.require_login(False)
+    @DownloaderDecorator.callback(login_require=False)
     async def submit_request(update: Update, context: CallbackContext):
         user_chat_id = update.effective_chat.id
 
@@ -189,8 +191,7 @@ class RegisterMessage:
         await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_start, parse_mode=ParseMode.HTML)
 
     @staticmethod
-    @Decorators.run_if_last_message(DecoratorType.DOWNLOADER)
-    @Decorators.require_login(False)
+    @DownloaderDecorator.callback(login_require=False)
     async def return_to_register(update: Update, context: CallbackContext):
         with Database.get_session() as session:
             CRUDDownloaderUser.update_state(session, str(update.effective_chat.id), DownloaderState.START)

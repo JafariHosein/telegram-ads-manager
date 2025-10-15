@@ -1,4 +1,4 @@
-from .manager import Database
+from .manager import Database, UpdateType
 from .account import CRUDAccount
 from .ad import CRUDAd
 from .ad_category import CRUDAdCategory

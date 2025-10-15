@@ -1,3 +1,3 @@
 from .models import *
 from .crud import *
-from .decorators import Decorators,DecoratorType
+from .decorators import DownloaderDecorator
