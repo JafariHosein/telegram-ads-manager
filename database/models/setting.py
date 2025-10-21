@@ -19,3 +19,5 @@ class Setting(Base):
     transfer_wallet_private_key: Mapped[str] = mapped_column(String, nullable=True)
     transfer_wallet_public_key: Mapped[str] = mapped_column(String, nullable=True)
     transfer_wallet_balance: Mapped[float] = mapped_column(Float, nullable=True)
+    log_channel_chat_id : Mapped[str] = mapped_column(String, nullable=True)
+    main_channel_chat_id: Mapped[str] = mapped_column(String, nullable=True)

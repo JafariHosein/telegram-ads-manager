@@ -20,31 +20,6 @@ class AllMessages:
         with Database.get_session() as session:
             user_state = CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id)).state
 
-        # funcs = {
-        #     "📝 ثبت‌ نام": RegisterMessage.register,
-        #     "🔑 ورود": LoginMessage.login,
-        #     "📞 ارتباط با پشتیبانی": ContactSupportMessage.contact_support,
-        #     "📢 تبلیغات": ManageAdsMessage.manage_ads,
-        #     "📊 آمار": "",
-        #     "🔗 مدیریت لینک": "",
-        #     "📨 درخواست ها": RequestsMessage.requests,
-        #     "👥 کاربران": "",
-        #     "💼 اکانت ها": "",
-        #     "🛠️ تنظیمات": "",
-        #     "💰 قیمت لحظه ایی": "",
-        # }
-        #
-        # for key, value in DownloaderReplyButtons.words.items():
-        #     if update.effective_message.text == value and user_state == DownloaderState.START:
-        #         return
-        #     elif update.effective_message.text == value and user_state != DownloaderState.START:
-        #         with Database.get_session() as session:
-        #             CRUDDownloaderUser.update_state(session, str(user_chat_id), DownloaderState.START)
-        #             CRUDDownloaderUser.update_state_data(session, str(user_chat_id), "")
-        #         if callable(funcs[value]):
-        #             await funcs[value](update, context)
-        #         return
-
         # Text Message
         if user_state == DownloaderState.GET_LINKED_USERNAME:
             await RegisterMessage.add_username(update, context)
@@ -66,3 +41,7 @@ class AllMessages:
         elif user_state in [DownloaderState.ENTER_AD_CHANNEL_MESSAGE, DownloaderState.ENTER_AD_RATE, DownloaderState.ENTER_AD_CAPACITY, DownloaderState.ENTER_AD_PRIZE,
                             DownloaderState.ENTER_AD_DESCRIPTION]:
             await ManageAdsMessage.create_add(update, context)
+        elif user_state in [DownloaderState.EDIT_AD_RATE, DownloaderState.EDIT_AD_PRIZE, DownloaderState.EDIT_AD_DESCRIPTION, DownloaderState.EDIT_AD_CAPACITY]:
+            await ManageAdsMessage.edit_ad_text(update, context)
+        elif user_state in [DownloaderState.SEARCH_WITH_AD_ID, DownloaderState.SEARCH_WITH_CHANNEL_CHAT_ID]:
+            await ManageAdsMessage.search(update, context)

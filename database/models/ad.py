@@ -32,7 +32,7 @@ class AdLinkTypeFarsi(enum.Enum):
 class Ad(Base):
     __tablename__ = "ads"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
     customer_user_id: Mapped[int] = mapped_column(Integer, ForeignKey("customer_users.id"), nullable=True)
     channel_chat_id: Mapped[str] = mapped_column(String, nullable=False)
     channel_name: Mapped[str] = mapped_column(String, nullable=False)

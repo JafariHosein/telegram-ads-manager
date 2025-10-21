@@ -21,7 +21,7 @@ class AccountStatus(enum.Enum):
 class Account(Base):
     __tablename__ = "accounts"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
     balance: Mapped[int] = mapped_column(BIGINT, nullable=False, default=0)
     ad_ids: Mapped[list[int]] = mapped_column(ARRAY(Integer), nullable=False, default=[])
     linked_username: Mapped[dict] = mapped_column(JSONB, nullable=False, default={})

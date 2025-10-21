@@ -1,3 +1,4 @@
+import random
 from typing import Sequence
 
 from sqlalchemy.orm import Session
@@ -9,11 +10,19 @@ from database.models.ad import Ad, AdLinkType, AdChannelType
 class CRUDAd:
 
     @staticmethod
+    def __generate_unique_random_id(db: Session):
+        while True:
+            rand_id = random.randint(10000, 999999)
+            exists = db.query(Ad).filter_by(id=rand_id).first()
+            if not exists:
+                return rand_id
+
+    @staticmethod
     def create(db: Session, channel_chat_id: str, channel_name: str, channel_type: AdChannelType,
                description: str, rate: int, capacity: int, auto_complete: bool, category_title: str,
                prize: dict = None, is_active: bool = True, channel_username: str = None, is_verified: bool = False, ad_link_type: AdLinkType = AdLinkType.NORMAL,
                customer_user_id: int = None) -> int:
-        new_ad = Ad(customer_user_id=customer_user_id, channel_chat_id=channel_chat_id, channel_name=channel_name, channel_type=channel_type,
+        new_ad = Ad(id=CRUDAd.__generate_unique_random_id(db), customer_user_id=customer_user_id, channel_chat_id=channel_chat_id, channel_name=channel_name, channel_type=channel_type,
                     description=description, rate=rate, capacity=capacity, auto_complete=auto_complete, category_title=category_title,
                     prize=prize, is_active=is_active, channel_username=channel_username, is_verified=is_verified, link_type=ad_link_type)
         db.add(new_ad)
@@ -37,6 +46,11 @@ class CRUDAd:
     def get_by_id(db: Session, id: int) -> Ad | None:
         statement = select(Ad).where(Ad.id == id)
         return db.execute(statement).scalars().first()
+
+    @staticmethod
+    def get_by_channel_chat_id(db: Session, chat_id: str) -> Sequence[Ad]:
+        statement = select(Ad).where(Ad.channel_chat_id == chat_id)
+        return db.execute(statement).scalars().all()
 
     @staticmethod
     def get_by_customer_user_id(db: Session, customer_user_id: int) -> Sequence[Ad]:

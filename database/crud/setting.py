@@ -83,6 +83,16 @@ class CRUDSetting:
         return db.execute(statement).scalars().all()[0].transfer_wallet_balance
 
     @staticmethod
+    def get_log_channel_chat_id(db: Session) -> str:
+        statement = select(Setting)
+        return db.execute(statement).scalars().all()[0].log_channel_chat_id
+
+    @staticmethod
+    def get_main_channel_chat_id(db: Session) -> str:
+        statement = select(Setting)
+        return db.execute(statement).scalars().all()[0].main_channel_chat_id
+
+    @staticmethod
     def update_main_wallet_address(db: Session, new_main_wallet_address: str):
         record = db.scalars(select(Setting)).first()
         record.main_wallet_address = new_main_wallet_address
@@ -148,5 +158,14 @@ class CRUDSetting:
         record.transfer_wallet_balance = new_transfer_wallet_balance
         db.commit()
 
+    @staticmethod
+    def update_log_channel_chat_id(db: Session, new_log_channel_chat_id: str):
+        record = db.scalars(select(Setting)).first()
+        record.log_channel_chat_id = new_log_channel_chat_id
+        db.commit()
 
-
+    @staticmethod
+    def update_main_channel_chat_id(db: Session, new_main_channel_chat_id: str):
+        record = db.scalars(select(Setting)).first()
+        record.main_channel_chat_id = new_main_channel_chat_id
+        db.commit()

@@ -1,6 +1,9 @@
 from telegram import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 
 from database.models.register_request import RegisterRequestStatusFarsi
+from database.crud.manager import Database
+from database.crud.downloader_user import CRUDDownloaderUser
+from utils.downloader_states import DownloaderState
 
 
 class DownloaderInlineButtons:
@@ -18,7 +21,7 @@ class DownloaderInlineButtons:
         "PreviousPage": "⏮ صفحه قبلی",
         "IUnderstand": "✅ متوجه شدم",
         "Search": "🔎 جستجو",
-        "See": "📄 مشاهده",
+        "See": "📪️ مشاهده",
         "Category": "📂 دسته بندی",
         "Title": "🏷️ عنوان",
         "Rate": "💰 نرخ",
@@ -32,6 +35,18 @@ class DownloaderInlineButtons:
         "SendToChannel": "📣 ارسال به کانال",
         "VerifyAd": "🧮 حسابرسی",
         "Details": "📋 جزئیات",
+        "DownloadLink": "🔗 دریافت لینک",
+        "ActiveAds": "🟢 تبلیغات فعال",
+        "NotVerifiedAds": "⚠️ تبلیغات حسابرسی نشده",
+        "VerifiedAds": "✅ تبلیغات حسابرسی شده",
+        "ByCategory": "🗂️ بر اساس دسته بندی",
+        "AllAds": "📚 تمام تبلیغات",
+        "Prize": "🎖️ جایزه",
+        "AutoComplete": "🤖 حسابرسی خودکار",
+        "Capacity": "📦 ظرفیت",
+        "Description": "📝 توضیحات",
+        "WithChatID" : "#️⃣ آیدی عددی کانال",
+        "WithAdID" : "📇 شماره تبلیغ"
     }
 
     register_empty = InlineKeyboardMarkup([
@@ -84,6 +99,12 @@ class DownloaderInlineButtons:
         [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToStart")]
     ])
 
+    search_with = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["WithAdID"]}", callback_data="SearchWithAdID"),
+         InlineKeyboardButton(f"{words["WithChatID"]}", callback_data="SearchWithChatID")],
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToManageAds")]
+    ])
+
     categories = InlineKeyboardMarkup([
         [InlineKeyboardButton(f"{words["Add"]}", callback_data="CreateAdCategory")],
         [InlineKeyboardButton(f"{words["Delete"]}", callback_data="RemoveAdCategory"),
@@ -122,10 +143,15 @@ class DownloaderInlineButtons:
         [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToManageAds")]
     ])
 
-
-
     i_admin_bot = InlineKeyboardMarkup([
         [InlineKeyboardButton(f"{words["Done"]}", callback_data="IAdminBotForThisAd")],
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToManageAds")]
+    ])
+
+    all_ads = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["ActiveAds"]}", callback_data="ViewActiveAds")],
+        [InlineKeyboardButton(f"{words["VerifiedAds"]}", callback_data="ViewVerifiedAds"), InlineKeyboardButton(f"{words["NotVerifiedAds"]}", callback_data="ViewNotVerifiedAds")],
+        [InlineKeyboardButton(f"{words["AllAds"]}", callback_data="ViewAllAds")],
         [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToManageAds")]
     ])
 
@@ -135,6 +161,94 @@ class DownloaderInlineButtons:
     return_to_mange_ads = InlineKeyboardMarkup([
         [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToManageAds")]
     ])
+    return_to_view_ads = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToViewAds")]
+    ])
+
+    @staticmethod
+    def get_edit_ads_menu(ad_id: int) -> InlineKeyboardMarkup:
+        return InlineKeyboardMarkup([
+            [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Rate"]}", callback_data=f"EditDataThisAdd*{ad_id}*rate"),
+             InlineKeyboardButton(f"{DownloaderInlineButtons.words["Prize"]}", callback_data=f"EditDataThisAdd*{ad_id}*prize")],
+            [InlineKeyboardButton(f"{DownloaderInlineButtons.words["AutoComplete"]}", callback_data=f"EditDataThisAdd*{ad_id}*autocomplete"),
+             InlineKeyboardButton(f"{DownloaderInlineButtons.words["Capacity"]}", callback_data=f"EditDataThisAdd*{ad_id}*capacity")],
+            [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Description"]}", callback_data=f"EditDataThisAdd*{ad_id}*description")],
+            [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Return"]}", callback_data=f"ViewThisAd*{ad_id}")]
+        ])
+
+    @staticmethod
+    def get_return_to_edit_ad(ad_id: int, clear_prize: bool = False, auto_complete: bool = False) -> InlineKeyboardMarkup:
+
+        if clear_prize:
+            return InlineKeyboardMarkup([
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Delete"]}", callback_data=f"ClearPrizeForThisAd*{ad_id}")],
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Return"]}", callback_data=f"EditThisAd*{ad_id}")]
+            ])
+
+        if auto_complete:
+            return InlineKeyboardMarkup([
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Enable"]}", callback_data=f"EnableAutoCompleteForThisAdd*{ad_id}"),
+                 InlineKeyboardButton(f"{DownloaderInlineButtons.words["Disable"]}", callback_data=f"DisableAutoCompleteForThisAdd*{ad_id}")],
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Return"]}", callback_data=f"EditThisAd*{ad_id}")]
+            ])
+
+        return InlineKeyboardMarkup([
+            [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Return"]}", callback_data=f"EditThisAd*{ad_id}")]
+        ])
+
+    @staticmethod
+    def get_ad_menu(ad_id: int, chat_id: str) -> InlineKeyboardMarkup:
+        with Database.get_session() as session:
+            state = CRUDDownloaderUser.get_by_chat_id(session, chat_id).state
+
+        if state == DownloaderState.FROM_NEW_AD:
+            return InlineKeyboardMarkup([
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["SendToChannel"]}", callback_data=f"SendThisAdToChannel*{ad_id}"),
+                 InlineKeyboardButton(f"{DownloaderInlineButtons.words["Details"]}", callback_data=f"ViewDetailsThisAd*{ad_id}")],
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Edit"]}", callback_data=f"EditThisAd*{ad_id}"),
+                 InlineKeyboardButton(f"{DownloaderInlineButtons.words["Delete"]}", callback_data=f"DeleteThisAd*{ad_id}")],
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Return"]}", callback_data="ReturnToManageAds")]
+            ])
+        elif state == DownloaderState.FROM_VIEW_ALL_ADS:
+            return InlineKeyboardMarkup([
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["SendToChannel"]}", callback_data=f"SendThisAdToChannel*{ad_id}"),
+                 InlineKeyboardButton(f"{DownloaderInlineButtons.words["Details"]}", callback_data=f"ViewDetailsThisAd*{ad_id}")],
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Edit"]}", callback_data=f"EditThisAd*{ad_id}"),
+                 InlineKeyboardButton(f"{DownloaderInlineButtons.words["Delete"]}", callback_data=f"DeleteThisAd*{ad_id}")],
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Return"]}", callback_data="ReturnToViewAllAds")]
+            ])
+        elif state == DownloaderState.FROM_VIEW_ACTIVE_ADS:
+            return InlineKeyboardMarkup([
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["SendToChannel"]}", callback_data=f"SendThisAdToChannel*{ad_id}"),
+                 InlineKeyboardButton(f"{DownloaderInlineButtons.words["Details"]}", callback_data=f"ViewDetailsThisAd*{ad_id}")],
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Edit"]}", callback_data=f"EditThisAd*{ad_id}"),
+                 InlineKeyboardButton(f"{DownloaderInlineButtons.words["Delete"]}", callback_data=f"DeleteThisAd*{ad_id}")],
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Return"]}", callback_data="ReturnToViewAllActiveAds")]
+            ])
+        elif state == DownloaderState.FROM_VIEW_VERIFIED_ADS:
+            return InlineKeyboardMarkup([
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["SendToChannel"]}", callback_data=f"SendThisAdToChannel*{ad_id}"),
+                 InlineKeyboardButton(f"{DownloaderInlineButtons.words["Details"]}", callback_data=f"ViewDetailsThisAd*{ad_id}")],
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Edit"]}", callback_data=f"EditThisAd*{ad_id}"),
+                 InlineKeyboardButton(f"{DownloaderInlineButtons.words["Delete"]}", callback_data=f"DeleteThisAd*{ad_id}")],
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Return"]}", callback_data="ReturnToViewAllVerifiedAds")]
+            ])
+        elif state == DownloaderState.FROM_VIEW_NOT_VERIFIED_ADS:
+            return InlineKeyboardMarkup([
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["SendToChannel"]}", callback_data=f"SendThisAdToChannel*{ad_id}"),
+                 InlineKeyboardButton(f"{DownloaderInlineButtons.words["Details"]}", callback_data=f"ViewDetailsThisAd*{ad_id}")],
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Edit"]}", callback_data=f"EditThisAd*{ad_id}"),
+                 InlineKeyboardButton(f"{DownloaderInlineButtons.words["Delete"]}", callback_data=f"DeleteThisAd*{ad_id}")],
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Return"]}", callback_data="ReturnToViewAllNotVerifiedAds")]
+            ])
+        elif state in [DownloaderState.SEARCH_WITH_AD_ID,DownloaderState.SEARCH_WITH_CHANNEL_CHAT_ID]:
+            return InlineKeyboardMarkup([
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["SendToChannel"]}", callback_data=f"SendThisAdToChannel*{ad_id}"),
+                 InlineKeyboardButton(f"{DownloaderInlineButtons.words["Details"]}", callback_data=f"ViewDetailsThisAd*{ad_id}")],
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Edit"]}", callback_data=f"EditThisAd*{ad_id}"),
+                 InlineKeyboardButton(f"{DownloaderInlineButtons.words["Delete"]}", callback_data=f"DeleteThisAd*{ad_id}")],
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Return"]}", callback_data="ReturnToManageAds")]
+            ])
 
 
 class DownloaderReplyButtons:

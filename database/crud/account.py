@@ -1,3 +1,4 @@
+import random
 from typing import Sequence
 
 from sqlalchemy.dialects.postgresql import JSONB
@@ -11,9 +12,17 @@ from database.crud.manager import UpdateType
 class CRUDAccount:
 
     @staticmethod
+    def __generate_unique_random_id(db:Session):
+        while True:
+            rand_id = random.randint(10000, 999999)
+            exists = db.query(Account).filter_by(id=rand_id).first()
+            if not exists:
+                return rand_id
+
+    @staticmethod
     def create(db: Session, username: str, password: str, status: AccountStatus = AccountStatus.ACTIVE,
                role: AccountRole = AccountRole.DOWNLOADER, ad_ids: list[int] = None, linked_username: dict = None, balance: int = 0) -> int:
-        new_account = Account(balance=balance, username=username, password=password, status=status, role=role, ad_ids=ad_ids,
+        new_account = Account(id=CRUDAccount.__generate_unique_random_id(db),balance=balance, username=username, password=password, status=status, role=role, ad_ids=ad_ids,
                               linked_username=linked_username)
         db.add(new_account)
         db.commit()
