@@ -30,6 +30,11 @@ class CRUDBankAccount:
         return db.execute(statement).scalars().first()
 
     @staticmethod
+    def get_by_value(db: Session, account_id: int, value: str) -> BankAccount | None:
+        statement = select(BankAccount).where(BankAccount.account_id == account_id, BankAccount.value == value)
+        return db.execute(statement).scalars().first()
+
+    @staticmethod
     def get_by_account_id(db: Session, account_id: int) -> Sequence[BankAccount]:
         statement = select(BankAccount).where(BankAccount.account_id == account_id)
         return db.execute(statement).scalars().all()

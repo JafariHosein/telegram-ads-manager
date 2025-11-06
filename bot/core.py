@@ -1,12 +1,14 @@
 import sys
 
 from telegram import Update
-from telegram.ext import ApplicationBuilder, AIORateLimiter, Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
+from telegram.ext import ApplicationBuilder, AIORateLimiter, Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, ChatMemberHandler
 
 from config import Config
 from utils import Logger
 from bot.keyboard import DownloaderReplyButtons
-from downloader_handlers import StartCommand, AdminCommand, RegisterMessage, AllMessages, RequestsMessage, LoginMessage, ContactSupportMessage, ManageAdsMessage
+from downloader_handlers import StartCommand, AdminCommand, RegisterMessage, AllMessages, RequestsMessage, LoginMessage, ContactSupportMessage, ManageAdsMessage, ActiveAdsMessage, ChatMember, AccountProfileMessage, \
+    ManageLinksMessage,TransferMessage
+from database.decorators import DownloaderDecorator
 
 
 class DownloaderBot:
@@ -38,6 +40,10 @@ class DownloaderBot:
         bot.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE & filters.Regex(fr"^{DownloaderReplyButtons.words["Login"]}$"), LoginMessage.login))
         bot.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE & filters.Regex(fr"^{DownloaderReplyButtons.words["ContactSupport"]}$"), ContactSupportMessage.contact_support))
         bot.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE & filters.Regex(fr"^{DownloaderReplyButtons.words["Ads"]}$"), ManageAdsMessage.manage_ads))
+        bot.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE & filters.Regex(fr"^{DownloaderReplyButtons.words["ActiveAds"]}$"), ActiveAdsMessage.active_ads))
+        bot.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE & filters.Regex(fr"^{DownloaderReplyButtons.words["AccountProfile"]}$"), AccountProfileMessage.account_profile))
+        bot.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE & filters.Regex(fr"^{DownloaderReplyButtons.words["LinkManager"]}$"), ManageLinksMessage.manage_links))
+        bot.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE & filters.Regex(fr"^{DownloaderReplyButtons.words["TransferBalance"]}$"), TransferMessage.transfer))
 
         # MessageHandlers --- Group 2
         bot.add_handler(MessageHandler(filters.ChatType.PRIVATE, AllMessages.message), group=2)
@@ -65,6 +71,22 @@ class DownloaderBot:
         bot.add_handler(CallbackQueryHandler(RequestsMessage.change_register_request_status, pattern=r"^SkipReasonForRejectedRegisterRequest\*[a-zA-Z0-9_]+$"))
         bot.add_handler(CallbackQueryHandler(RequestsMessage.change_register_request_status, pattern=r"^RejectThisRegisterRequest\*[a-zA-Z0-9_]+$"))
         bot.add_handler(CallbackQueryHandler(RequestsMessage.change_register_request_status, pattern=r"^AddThisUserIDToBlackList\*[a-zA-Z0-9_]+$"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.transfer_requests, pattern="TransfersMenu"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.pending_transfer_requests, pattern="PendingTransferRequests"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.pending_transfer_requests, pattern="GoToNextPendingTransferRequests"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.pending_transfer_requests, pattern="GoToPreviousPendingTransferRequests"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.pending_transfer_requests, pattern=r"^ShowThisPendingTransferRequest\*[a-zA-Z0-9_]+$"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.completed_transfer_requests, pattern="CompletedTransferRequests"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.completed_transfer_requests, pattern="GoToNextCompletedTransferRequests"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.completed_transfer_requests, pattern="GoToPreviousCompletedTransferRequests"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.completed_transfer_requests, pattern=r"^ShowThisCompletedTransferRequest\*[a-zA-Z0-9_]+$"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.rejected_transfer_requests, pattern="RejectedTransferRequests"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.rejected_transfer_requests, pattern="GoToNextRejectedTransferRequests"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.rejected_transfer_requests, pattern="GoToPreviousRejectedTransferRequests"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.rejected_transfer_requests, pattern=r"^ShowThisRejectedTransferRequest\*[a-zA-Z0-9_]+$"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.change_transfer_request_status, pattern=r"^CompleteThisTransferRequest\*[a-zA-Z0-9_]+$"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.change_transfer_request_status, pattern=r"^SkipReasonForRejectedTransferRequest\*[a-zA-Z0-9_]+$"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.change_transfer_request_status, pattern=r"^RejectThisTransferRequest\*[a-zA-Z0-9_]+$"))
 
         bot.add_handler(CallbackQueryHandler(ManageAdsMessage.create_add, pattern="AddNewAd"))
         bot.add_handler(CallbackQueryHandler(ManageAdsMessage.create_add, pattern="IAdminBotForThisAd"))
@@ -83,10 +105,16 @@ class DownloaderBot:
         bot.add_handler(CallbackQueryHandler(ManageAdsMessage.edit_ad_category, pattern="EditThisAdCategory"))
         bot.add_handler(CallbackQueryHandler(ManageAdsMessage.edit_ad_category, pattern="EditTitleThisCategory"))
         bot.add_handler(CallbackQueryHandler(ManageAdsMessage.edit_ad_category, pattern="EditRateThisCategory"))
+        bot.add_handler(CallbackQueryHandler(ManageAdsMessage.verify_ad, pattern="VerifyThisAd"))
+        bot.add_handler(CallbackQueryHandler(ManageAdsMessage.change_status_ad, pattern="DisableThisAd"))
+        bot.add_handler(CallbackQueryHandler(ManageAdsMessage.change_status_ad, pattern="EnableThisAd"))
         bot.add_handler(CallbackQueryHandler(ManageAdsMessage.view_ads, pattern="SeeAds"))
         bot.add_handler(CallbackQueryHandler(ManageAdsMessage.view_active_ads, pattern="ViewActiveAds"))
         bot.add_handler(CallbackQueryHandler(ManageAdsMessage.view_active_ads, pattern="GoToNextViewActiveAds"))
         bot.add_handler(CallbackQueryHandler(ManageAdsMessage.view_active_ads, pattern="GoToPreviousViewActiveAds"))
+        bot.add_handler(CallbackQueryHandler(ManageAdsMessage.view_inactive_ads, pattern="ViewInActiveAds"))
+        bot.add_handler(CallbackQueryHandler(ManageAdsMessage.view_inactive_ads, pattern="GoToNextViewInActiveAds"))
+        bot.add_handler(CallbackQueryHandler(ManageAdsMessage.view_inactive_ads, pattern="GoToPreviousViewInActiveAds"))
         bot.add_handler(CallbackQueryHandler(ManageAdsMessage.view_verified_ads, pattern="ViewVerifiedAds"))
         bot.add_handler(CallbackQueryHandler(ManageAdsMessage.view_verified_ads, pattern="GoToNextViewVerifiedAds"))
         bot.add_handler(CallbackQueryHandler(ManageAdsMessage.view_verified_ads, pattern="GoToPreviousViewVerifiedAds"))
@@ -103,6 +131,46 @@ class DownloaderBot:
         bot.add_handler(CallbackQueryHandler(ManageAdsMessage.search, pattern="SearchAd"))
         bot.add_handler(CallbackQueryHandler(ManageAdsMessage.search, pattern="SearchWithAdID"))
         bot.add_handler(CallbackQueryHandler(ManageAdsMessage.search, pattern="SearchWithChatID"))
+        bot.add_handler(CallbackQueryHandler(ManageAdsMessage.view_ad_details, pattern="ViewDetailsThisAd"))
+
+        bot.add_handler(CallbackQueryHandler(ActiveAdsMessage.show_category, pattern="ShowThisCategoryTitle"))
+        bot.add_handler(CallbackQueryHandler(ActiveAdsMessage.show_category, pattern=r"GoToPreviousUserActiveAds\*[a-zA-Z0-9_]+$"))
+        bot.add_handler(CallbackQueryHandler(ActiveAdsMessage.show_category, pattern=r"GoToNextUserActiveAds\*[a-zA-Z0-9_]+$"))
+        bot.add_handler(CallbackQueryHandler(ActiveAdsMessage.ad_details, pattern=r"ThisAdDetails\*[a-zA-Z0-9_]+$"))
+        bot.add_handler(CallbackQueryHandler(ActiveAdsMessage.download_link, pattern=r"DownloadLinkOfThisAd\*[a-zA-Z0-9_]+$"))
+        bot.add_handler(CallbackQueryHandler(ActiveAdsMessage.view_leaderboard, pattern=r"SeeLeaderBoardOfThisAd\*[a-zA-Z0-9_]+$"))
+        bot.add_handler(CallbackQueryHandler(ActiveAdsMessage.view_prize, pattern=r"SeePrizeOfThisAd\*[a-zA-Z0-9_]+$"))
+
+        bot.add_handler(CallbackQueryHandler(AccountProfileMessage.change_password, pattern="YesChangePassword"))
+        bot.add_handler(CallbackQueryHandler(AccountProfileMessage.change_password, pattern="ChangeMyPassword"))
+        bot.add_handler(CallbackQueryHandler(AccountProfileMessage.logout, pattern="Logout"))
+        bot.add_handler(CallbackQueryHandler(AccountProfileMessage.logout, pattern="YesLogout"))
+        bot.add_handler(CallbackQueryHandler(AccountProfileMessage.my_links, pattern="MyAccountLinks"))
+        bot.add_handler(CallbackQueryHandler(AccountProfileMessage.my_links, pattern="GoToPreviousMyLinks"))
+        bot.add_handler(CallbackQueryHandler(AccountProfileMessage.my_links, pattern="GoToNextViewMyLinks"))
+        bot.add_handler(CallbackQueryHandler(AccountProfileMessage.view_link, pattern=r"ViewThisLink\*[a-zA-Z0-9_]+$"))
+        bot.add_handler(CallbackQueryHandler(AccountProfileMessage.my_usernames, pattern="MyAccountChannels"))
+        bot.add_handler(CallbackQueryHandler(AccountProfileMessage.remove_from_my_usernames, pattern="DeleteAccountLinkedUsername"))
+        bot.add_handler(CallbackQueryHandler(AccountProfileMessage.remove_from_my_usernames, pattern="DeleteThisFromAccountUsernames"))
+        bot.add_handler(CallbackQueryHandler(AccountProfileMessage.add_to_my_usernames, pattern="AddAccountLinkedUsername"))
+        bot.add_handler(CallbackQueryHandler(AccountProfileMessage.my_bank_account, pattern="MyAccountBankAccounts"))
+        bot.add_handler(CallbackQueryHandler(AccountProfileMessage.add_bank_account, pattern="AddBankAccount"))
+        bot.add_handler(CallbackQueryHandler(AccountProfileMessage.add_bank_account, pattern="AddShabaBankAccount"))
+        bot.add_handler(CallbackQueryHandler(AccountProfileMessage.add_bank_account, pattern="AddCardBankAccount"))
+        bot.add_handler(CallbackQueryHandler(AccountProfileMessage.remove_bank_account, pattern="RemoveBankAccount"))
+        bot.add_handler(CallbackQueryHandler(AccountProfileMessage.remove_bank_account, pattern="RemoveThisBankAccount"))
+
+        bot.add_handler(CallbackQueryHandler(ManageLinksMessage.remove_link, pattern="DeleteThisLink"))
+        bot.add_handler(CallbackQueryHandler(ManageLinksMessage.view_members, pattern="ViewThisLinkUsers"))
+        bot.add_handler(CallbackQueryHandler(ManageLinksMessage.view_members, pattern="GoToPreviousLinkMembers"))
+        bot.add_handler(CallbackQueryHandler(ManageLinksMessage.view_members, pattern="GoToNextLinkMembers"))
+        bot.add_handler(CallbackQueryHandler(ManageLinksMessage.delete_member, pattern="DeleteThisMember"))
+
+        bot.add_handler(CallbackQueryHandler(TransferMessage.transfer_with_account_id, pattern="TransferWithAccountID"))
+        bot.add_handler(CallbackQueryHandler(TransferMessage.transfer_with_username, pattern="TransferWithUsername"))
+        bot.add_handler(CallbackQueryHandler(TransferMessage.submit, pattern="SubmitTransferRequest"))
+
+        bot.add_handler(CallbackQueryHandler(DownloaderDecorator.i_joined, pattern="IJoinedForceJoins"))
 
         # -------- Return --------
         bot.add_handler(CallbackQueryHandler(RegisterMessage.return_to_register, pattern="ReturnToRegister"))
@@ -111,10 +179,15 @@ class DownloaderBot:
 
         bot.add_handler(CallbackQueryHandler(RequestsMessage.return_to_requests, pattern="ReturnToRequests"))
         bot.add_handler(CallbackQueryHandler(RequestsMessage.return_to_register_requests, pattern="ReturnTo2RegisterRequests"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.return_to_transfer_requests, pattern="ReturnTo2TransferRequests"))
         bot.add_handler(CallbackQueryHandler(RequestsMessage.return_to_pending_register_requests, pattern="ReturnToPendingRegisterRequests"))
         bot.add_handler(CallbackQueryHandler(RequestsMessage.return_to_approved_register_requests, pattern="ReturnToApprovedRegisterRequests"))
         bot.add_handler(CallbackQueryHandler(RequestsMessage.return_to_rejected_register_requests, pattern="ReturnToRejectedRegisterRequests"))
         bot.add_handler(CallbackQueryHandler(RequestsMessage.return_to_show_register_request, pattern=r"^ReturnToShowRegisterRequest\*[a-zA-Z0-9_]+$"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.return_to_pending_transfer_requests, pattern="ReturnToPendingTransferRequests"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.return_to_completed_transfer_requests, pattern="ReturnToCompletedTransferRequests"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.return_to_rejected_transfer_requests, pattern="ReturnToRejectedTransferRequests"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.return_to_show_transfer_request, pattern="ReturnToShowTransferRequest"))
 
         bot.add_handler(CallbackQueryHandler(ManageAdsMessage.return_to_ad_category, pattern="ReturnToCategories"))
         bot.add_handler(CallbackQueryHandler(ManageAdsMessage.return_to_manage_ads, pattern="ReturnToManageAds"))
@@ -123,8 +196,23 @@ class DownloaderBot:
         bot.add_handler(CallbackQueryHandler(ManageAdsMessage.return_to_view_all_active_ads, pattern="ReturnToViewAllActiveAds"))
         bot.add_handler(CallbackQueryHandler(ManageAdsMessage.return_to_view_all_verified_ads, pattern="ReturnToViewAllVerifiedAds"))
         bot.add_handler(CallbackQueryHandler(ManageAdsMessage.return_to_view_all_not_verified_ads, pattern="ReturnToViewAllNotVerifiedAds"))
+        bot.add_handler(CallbackQueryHandler(ManageAdsMessage.return_to_inactive_ads, pattern="ReturnToViewAllInActiveAds"))
+
+        bot.add_handler(CallbackQueryHandler(ActiveAdsMessage.return_to_active_ads, pattern="ReturnToUserActiveAds"))
+        bot.add_handler(CallbackQueryHandler(ActiveAdsMessage.return_to_show_category, pattern="ReturnToShowCategory"))
+        bot.add_handler(CallbackQueryHandler(ActiveAdsMessage.return_to_ad_details, pattern="ReturnToAdDetails"))
+        bot.add_handler(CallbackQueryHandler(ActiveAdsMessage.goto_account_profile, pattern="GoToAccountProfile"))
+
+        bot.add_handler(CallbackQueryHandler(AccountProfileMessage.return_to_account_profile, pattern="ReturnToAccountProfile"))
+        bot.add_handler(CallbackQueryHandler(AccountProfileMessage.my_usernames, pattern="ReturnToUsernames"))
+        bot.add_handler(CallbackQueryHandler(AccountProfileMessage.my_bank_account, pattern="ReturnToBankAccount"))
+
+        bot.add_handler(CallbackQueryHandler(TransferMessage.return_to_transfer, pattern="ReturnToTransfer"))
+
+        bot.add_handler(CallbackQueryHandler(ManageLinksMessage.return_to_view_link_menu, pattern="ReturnToViewLinkMenu"))
 
         # ChatMemberHandlers
+        bot.add_handler(ChatMemberHandler(ChatMember.new_change, ChatMemberHandler.CHAT_MEMBER))
 
         bot.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
 

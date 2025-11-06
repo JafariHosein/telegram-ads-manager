@@ -3,10 +3,9 @@ from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.constants import ParseMode
 from telegram.ext import CallbackContext, ApplicationHandlerStop
 
-import database
-from bot.keyboard import DownloaderInlineButtons
-from utils import Pagination, Password, DownloaderState
-from database import Database, DownloaderDecorator, AccountRole, CRUDDownloaderUser, CRUDRegisterRequest, RegisterRequestStatus, RegisterRequestStatusFarsi, CRUDAccount, CRUDSession
+from bot.keyboard import DownloaderInlineButtons, DownloaderReplyButtons
+from utils import Pagination, Password, DownloaderState, NumberTools
+from database import Database, DownloaderDecorator, AccountRole, CRUDDownloaderUser, CRUDRegisterRequest, RegisterRequestStatus, RegisterRequestStatusFarsi, CRUDAccount, CRUDSession, CRUDTransferRequest, TransferRequestStatusFarsi, TransferRequestStatus, UpdateType
 
 
 class RequestsMessage:
@@ -15,6 +14,10 @@ class RequestsMessage:
     @DownloaderDecorator.message(login_require=True, role_require=AccountRole.ADMIN)
     async def requests(update: Update, context: CallbackContext, returned: bool = False):
         user_chat_id = update.effective_chat.id
+
+        with Database.get_session() as session:
+            CRUDDownloaderUser.update_state(session, str(user_chat_id), DownloaderState.START)
+            CRUDDownloaderUser.update_state_data(session, str(user_chat_id), "")
 
         message_text = "📨 درخواست ها"
         message_text += "\n\n" + "📋 توضیح درخواست‌ها:" + "\n" + "<blockquote>"
@@ -47,7 +50,8 @@ class RequestsMessage:
             message_text += "- تعداد درخواست های " + "(" + RegisterRequestStatusFarsi.REJECTED.value + ") : " + str(len(CRUDRegisterRequest.get_by_status(session, RegisterRequestStatus.REJECTED)))
             message_text += "</blockquote>"
             message_text += "\n" + "⭕️ " + "برای دیدن درخواست‌های عضویت، وضعیت مورد نظر را انتخاب کنید تا درخواست‌های همان وضعیت نمایش داده شوند"
-            await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.register_requests, parse_mode=ParseMode.HTML)
+            await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.register_requests,
+                                                parse_mode=ParseMode.HTML)
 
     @staticmethod
     @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
@@ -212,10 +216,9 @@ class RequestsMessage:
                     message_text += "</blockquote>" + "\n" + "⚠️ لطفاً حتماً رمز عبور خود را ذخیره کنید."
                     message_text += "\n" + "رمز عبور پس از این مرحله دیگر قابل مشاهده نخواهد بود، اما در صورت فراموشی، می‌توانید از منوی «حساب کاربری» رمز جدیدی بسازید."
                     message_text += "\n\n" + "🚀 هم‌اکنون به‌صورت خودکار وارد حساب خود شده‌اید و نیازی به انجام هیچ کاری نیست."
-                    message_text += "\n\n" + "✅ برای ادامه، روی دکمه‌ی «متوجه شدم» کلیک کنید."
 
                     try:
-                        msg = await context.bot.send_message(chat_id=user.chat_id, text=message_text, parse_mode=ParseMode.HTML, reply_markup=DownloaderInlineButtons.i_saved_my_password)
+                        msg = await context.bot.send_message(chat_id=user.chat_id, text=message_text, parse_mode=ParseMode.HTML, reply_markup=DownloaderReplyButtons.downloader)
                         CRUDDownloaderUser.update_bot_last_message_id(session, user.chat_id, msg.id)
                     except:
                         pass
@@ -290,6 +293,257 @@ class RequestsMessage:
 
     @staticmethod
     @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
+    async def transfer_requests(update: Update, context: CallbackContext):
+        user_chat_id = update.effective_user.id
+        with Database.get_session() as session:
+            message_text = "🔁 انتقال ها"
+            message_text += "\n\n" + "<blockquote>"
+            message_text += "- تعداد درخواست های " + "(" + TransferRequestStatusFarsi.PENDING.value + ") : " + str(len(CRUDTransferRequest.get_by_status(session, TransferRequestStatus.PENDING))) + "\n"
+            message_text += "- تعداد درخواست های " + "(" + TransferRequestStatusFarsi.COMPLETED.value + ") : " + str(len(CRUDTransferRequest.get_by_status(session, TransferRequestStatus.COMPLETED))) + "\n"
+            message_text += "- تعداد درخواست های " + "(" + TransferRequestStatusFarsi.REJECTED.value + ") : " + str(len(CRUDTransferRequest.get_by_status(session, TransferRequestStatus.REJECTED)))
+            message_text += "</blockquote>"
+            message_text += "\n" + "⭕️ " + "برای دیدن درخواست‌های انتقال، وضعیت مورد نظر را انتخاب کنید تا درخواست‌های همان وضعیت نمایش داده شوند"
+            await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.transfer_requests, parse_mode=ParseMode.HTML)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
+    async def pending_transfer_requests(update: Update, context: CallbackContext):
+        user_chat_id = update.effective_user.id
+        callback_data = "ShowThisPendingTransferRequest"
+        buttons_callback = ["GoToPreviousPendingTransferRequests", "GoToNextPendingTransferRequests", "ReturnTo2TransferRequests"]
+        properties = [["id", "- شماره درخواست"], ["account_id", "- شماره حساب مبدا"], ["target_account_id", "- شماره حساب مقصد"], ["amount", "- مبلغ"]]
+
+        if callback_data in update.callback_query.data:
+            transfer_request_id = int(update.callback_query.data.split("*")[1])
+            await RequestsMessage.__show_transfer_request(update, context, transfer_request_id, "ReturnToPendingTransferRequests")
+            return
+
+        with Database.get_session() as session:
+            data = CRUDTransferRequest.get_by_status(session, TransferRequestStatus.PENDING)
+
+            if "GoToPreviousPendingTransferRequests" in update.callback_query.data:
+                page_number = int(update.callback_query.data.split("*")[1])
+                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, page_number, 3)
+            elif "GoToNextPendingTransferRequests" in update.callback_query.data:
+                page_number = int(update.callback_query.data.split("*")[1])
+                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, page_number, 3)
+            else:
+                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, 1, 3)
+
+        await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=markup, parse_mode=ParseMode.HTML)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
+    async def completed_transfer_requests(update: Update, context: CallbackContext):
+        user_chat_id = update.effective_user.id
+        callback_data = "ShowThisCompletedTransferRequest"
+        buttons_callback = ["GoToPreviousCompletedTransferRequests", "GoToNextCompletedTransferRequests", "ReturnTo2TransferRequests"]
+        properties = [["id", "- شماره درخواست"], ["account_id", "- شماره حساب مبدا"], ["target_account_id", "- شماره حساب مقصد"], ["amount", "- مبلغ"]]
+
+        if callback_data in update.callback_query.data:
+            transfer_request_id = int(update.callback_query.data.split("*")[1])
+            await RequestsMessage.__show_transfer_request(update, context, transfer_request_id, "ReturnToCompletedTransferRequests")
+            return
+
+        with Database.get_session() as session:
+            data = CRUDTransferRequest.get_by_status(session, TransferRequestStatus.COMPLETED)
+
+            if "GoToPreviousCompletedTransferRequests" in update.callback_query.data:
+                page_number = int(update.callback_query.data.split("*")[1])
+                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, page_number, 3)
+            elif "GoToNextCompletedTransferRequests" in update.callback_query.data:
+                page_number = int(update.callback_query.data.split("*")[1])
+                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, page_number, 3)
+            else:
+                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, 1, 3)
+
+        await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=markup, parse_mode=ParseMode.HTML)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
+    async def rejected_transfer_requests(update: Update, context: CallbackContext):
+        user_chat_id = update.effective_user.id
+        callback_data = "ShowThisRejectedTransferRequest"
+        buttons_callback = ["GoToPreviousRejectedTransferRequests", "GoToNextRejectedTransferRequests", "ReturnTo2TransferRequests"]
+        properties = [["id", "- شماره درخواست"], ["account_id", "- شماره حساب مبدا"], ["target_account_id", "- شماره حساب مقصد"], ["amount", "- مبلغ"]]
+
+        if callback_data in update.callback_query.data:
+            transfer_request_id = int(update.callback_query.data.split("*")[1])
+            await RequestsMessage.__show_transfer_request(update, context, transfer_request_id, "ReturnToRejectedTransferRequests")
+            return
+
+        with Database.get_session() as session:
+            data = CRUDTransferRequest.get_by_status(session, TransferRequestStatus.REJECTED)
+
+            if "GoToPreviousRejectedTransferRequests" in update.callback_query.data:
+                page_number = int(update.callback_query.data.split("*")[1])
+                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, page_number, 3)
+            elif "GoToNextRejectedTransferRequests" in update.callback_query.data:
+                page_number = int(update.callback_query.data.split("*")[1])
+                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, page_number, 3)
+            else:
+                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, 1, 3)
+
+        await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=markup, parse_mode=ParseMode.HTML)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
+    async def __show_transfer_request(update: Update, context: CallbackContext, transfer_request_id: int, return_callback_data: str):
+        user_chat_id = update.effective_user.id
+        counter = 1
+        with Database.get_session() as session:
+            request = CRUDTransferRequest.get_by_id(session, transfer_request_id)
+
+            message_text = "درخواست انتقال" + "\n\n"
+            message_text += "جزئیات درخواست : " + "\n" + "<blockquote>"
+            message_text += "- " + "شماره درخواست : " + f"{request.id}" + "\n\n"
+            message_text += "- " + "شماره حساب مبدا : " + f"{request.account_id}" + "\n\n"
+            message_text += "- " + "شماره حساب مقصد : " + f"{request.target_account_id}" + "\n\n"
+            message_text += "- " + "مبلغ : " + f"{NumberTools.format_number(request.amount) + ' تومان'}"
+
+            message_text += "\n\n" + "- " + "وضعیت درخواست : " + f"{TransferRequestStatusFarsi[TransferRequestStatus(request.status).name].value}" + "\n\n"
+            if request.status == TransferRequestStatus.REJECTED:
+                message_text += "- " + "دلیل رد : " + f"{request.reason if request.reason else "ذکر نشده"}" + "\n\n"
+            elif request.status == TransferRequestStatus.COMPLETED:
+                message_text += "- " + "تکمیل خودکار : " + ("بله" if request.auto_completed else "خیر") + "\n\n"
+
+            shamsi_date = jdatetime.datetime.fromgregorian(datetime=request.created_at)
+            shamsi_date = shamsi_date.strftime('%Y/%m/%d ⏰ %H:%M')
+            shamsi_date = str(shamsi_date).replace("-", "/")
+            message_text += "- " + "تاریخ ثبت :" + shamsi_date + "\n\n"
+            message_text += "</blockquote>"
+
+            if request.status == TransferRequestStatus.PENDING:
+                message_text += "✅ " + "در صورت تأیید، مبلغ انتقال پیدا میکند."
+                message_text += "\n\n" + "❌ " + "در صورت رد درخواست، انتقال انجام نمیشود، همچنین میتوانید دلیل رد را هم بنویسید."
+
+                markup = InlineKeyboardMarkup([
+                    [InlineKeyboardButton("❌ رد", callback_data=f"RejectThisTransferRequest*{request.id}"), InlineKeyboardButton("✅ تایید", callback_data=f"CompleteThisTransferRequest*{request.id}")],
+                    [InlineKeyboardButton("🔙 بازگشت", callback_data=return_callback_data)],
+                ])
+            else:
+                markup = InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔙 بازگشت", callback_data=return_callback_data)],
+                ])
+
+        await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=markup, parse_mode=ParseMode.HTML)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
+    async def change_transfer_request_status(update: Update, context: CallbackContext):
+        user_chat_id = update.effective_user.id
+
+        if update.callback_query:
+            transferr_request_id = int(update.callback_query.data.split("*")[1])
+            if "CompleteThisTransferRequest" in update.callback_query.data:
+
+                with Database.get_session() as session:
+                    reqeust = CRUDTransferRequest.get_by_id(session, transferr_request_id)
+                    CRUDTransferRequest.update_status(session, reqeust.id, TransferRequestStatus.COMPLETED)
+
+                    CRUDAccount.update_balance(session, reqeust.account_id, UpdateType.DECREMENT, reqeust.amount)
+                    CRUDAccount.update_balance(session, reqeust.target_account_id, UpdateType.INCREMENT, reqeust.amount)
+
+                    message_text = "✅ کاربر عزیز درخواست انتقال شما تایید شد" + "\n"
+                    message_text += "مبلغ انتقال : " + NumberTools.format_number(reqeust.amount) + " تومان"
+
+                    record = CRUDSession.get_by_account_id(session, reqeust.account_id)
+
+                    if record:
+                        source_chat_id = CRUDDownloaderUser.get_by_id(session, record[0].downloader_user_id).chat_id
+                        try:
+                            msg = await context.bot.send_message(chat_id=source_chat_id, text=message_text, parse_mode=ParseMode.HTML)
+                            CRUDDownloaderUser.update_bot_last_message_id(session, source_chat_id, msg.id)
+                        except:
+                            pass
+
+                    message_text = "✅ مبلغ زیر از حساب کاربری " + str(reqeust.account_id) + " به شما انتقال پیدا کرد"
+                    message_text += "مبلغ انتقال : " + NumberTools.format_number(reqeust.amount) + " تومان"
+
+                    record = CRUDSession.get_by_account_id(session, reqeust.target_account_id)
+
+                    if record:
+                        target_chat_id = CRUDDownloaderUser.get_by_id(session, record[0].downloader_user_id).chat_id
+                        try:
+                            msg = await context.bot.send_message(chat_id=target_chat_id, text=message_text, parse_mode=ParseMode.HTML)
+                            CRUDDownloaderUser.update_bot_last_message_id(session, target_chat_id, msg.id)
+                        except:
+                            pass
+
+                    message_text = "✅ درخواست با شماره " + str(transferr_request_id) + " با موفقیت تایید شد."
+                    message_text += "\n\n" + "- اعلان به کاربران ارسال شد"
+                    await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_pending_transfer_requests)
+
+            elif "RejectThisTransferRequest" in update.callback_query.data:
+
+                with Database.get_session() as session:
+                    CRUDDownloaderUser.update_state(session, str(user_chat_id), DownloaderState.ENTER_REASON_FOR_REJECT_TRANSFER)
+                    CRUDDownloaderUser.update_state_data(session, str(user_chat_id), str(transferr_request_id))
+
+                message_text = "⭕️ دلیل رد کردن درخواست را وارد کنید" + "\n\n" + "(اختیاری)"
+
+                markup = InlineKeyboardMarkup([
+                    [InlineKeyboardButton("⏭️ رد کردن", callback_data=f"SkipReasonForRejectedTransferRequest*{transferr_request_id}")],
+                    [InlineKeyboardButton("🔙 بازگشت", callback_data=f"ReturnToShowTransferRequest*{transferr_request_id}")],
+                ])
+
+                await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=markup)
+
+            elif "SkipReasonForRejectedTransferRequest" in update.callback_query.data:
+
+                with Database.get_session() as session:
+                    # Change Admin State
+                    CRUDDownloaderUser.update_state(session, str(user_chat_id), DownloaderState.START)
+
+                    request = CRUDTransferRequest.get_by_id(session, transferr_request_id)
+                    record = CRUDSession.get_by_account_id(session, request.account_id)
+                    if record:
+                        source_chat_id = CRUDDownloaderUser.get_by_id(session, record[0].downloader_user_id).chat_id
+                        CRUDTransferRequest.update_status(session, transferr_request_id, TransferRequestStatus.REJECTED)
+
+                        message_text = "⭕️ " + "کاربر گرامی، متأسفانه درخواست انتقال شما رد شد."
+                        message_text += "\n\n" + "هیچ دلیلی برای این رد شدن از سوی مدیریت ثبت نشده است."
+                        try:
+                            msg = await context.bot.send_message(chat_id=source_chat_id, text=message_text, parse_mode=ParseMode.HTML, reply_markup=DownloaderInlineButtons.return_to_start)
+                            CRUDDownloaderUser.update_bot_last_message_id(session, source_chat_id, msg.id)
+                        except:
+                            pass
+
+                    message_text = "✅ درخواست با شماره " + str(transferr_request_id) + " با موفقیت رد شد."
+                    message_text += "\n\n" + "- اعلان به کاربر درخواست دهنده ارسال شد"
+                    await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_pending_transfer_requests)
+
+        elif update.effective_message.text:
+            reason = update.effective_message.text
+            with Database.get_session() as session:
+                # Change Admin State
+                CRUDDownloaderUser.update_state(session, str(user_chat_id), DownloaderState.START)
+
+                transfer_request_id = int(CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id)).state_data)
+                request = CRUDTransferRequest.get_by_id(session, transfer_request_id)
+                record = CRUDSession.get_by_account_id(session, request.account_id)
+                if record:
+                    source_chat_id = CRUDDownloaderUser.get_by_id(session, record[0].downloader_user_id).chat_id
+                    CRUDTransferRequest.update_status(session, transfer_request_id, TransferRequestStatus.REJECTED)
+                    CRUDTransferRequest.update_reason(session, transfer_request_id, reason)
+
+                    message_text = "⭕️ " + "کاربر گرامی، متأسفانه درخواست انتقال شما رد شد."
+                    message_text += "\n\n" + "دلیل رد شدن درخواست : "
+                    message_text += "\n" + "<blockquote>" + reason + "</blockquote>"
+
+                    try:
+                        msg = await context.bot.send_message(chat_id=source_chat_id, text=message_text, parse_mode=ParseMode.HTML, reply_markup=DownloaderInlineButtons.return_to_start)
+                        CRUDDownloaderUser.update_bot_last_message_id(session, source_chat_id, msg.id)
+                    except:
+                        pass
+
+                message_text = "✅ درخواست با شماره " + str(transfer_request_id) + " با موفقیت رد شد."
+                message_text += "\n\n" + "- اعلان به کاربر درخواست دهنده ارسال شد"
+                msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_pending_transfer_requests)
+                CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
     async def return_to_requests(update: Update, context: CallbackContext):
         await RequestsMessage.requests(update, context, returned=True)
 
@@ -317,5 +571,32 @@ class RequestsMessage:
 
     @staticmethod
     @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
+    async def return_to_show_transfer_request(update: Update, context: CallbackContext):
+        transfer_request_id = int(update.callback_query.data.split("*")[1])
+        return_callback = "ReturnToPendingTransferRequests"
+        await RequestsMessage.__show_transfer_request(update, context, transfer_request_id, return_callback)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
     async def return_to_register_requests(update: Update, context: CallbackContext):
         await RequestsMessage.register_requests(update, context)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
+    async def return_to_transfer_requests(update: Update, context: CallbackContext):
+        await RequestsMessage.transfer_requests(update, context)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
+    async def return_to_pending_transfer_requests(update: Update, context: CallbackContext):
+        await RequestsMessage.pending_transfer_requests(update, context)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
+    async def return_to_completed_transfer_requests(update: Update, context: CallbackContext):
+        await RequestsMessage.completed_transfer_requests(update, context)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
+    async def return_to_rejected_transfer_requests(update: Update, context: CallbackContext):
+        await RequestsMessage.rejected_transfer_requests(update, context)

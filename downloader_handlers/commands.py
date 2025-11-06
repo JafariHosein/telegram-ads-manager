@@ -3,9 +3,10 @@ from telegram.constants import ParseMode
 from telegram.ext import CallbackContext, ApplicationHandlerStop
 
 from bot.keyboard import DownloaderReplyButtons, DownloaderInlineButtons
-from database import CRUDDownloaderUser, Database, CRUDSession, CRUDAccount, AccountRole, DownloaderDecorator
+from database import CRUDDownloaderUser, Database, CRUDSession, CRUDAccount, AccountRole, DownloaderDecorator, CRUDAd, AdStatus
 from utils import DownloaderState, Password
 from config import Config
+from downloader_handlers.active_ads import ActiveAdsMessage
 
 
 class StartCommand:
@@ -21,15 +22,32 @@ class StartCommand:
             CRUDDownloaderUser.update_state(session, str(user_chat_id), DownloaderState.START)
             CRUDDownloaderUser.update_state_data(session, str(user_chat_id), "")
 
-        with Database.get_session() as session:
+        with Database.get_session() as ssn:
             # Check User IsLogin
-            user_id = CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id)).id
-            session = CRUDSession.get_by_downloader_user_id(session, user_id, is_active=True)
+            user_id = CRUDDownloaderUser.get_by_chat_id(ssn, str(user_chat_id)).id
+            session = CRUDSession.get_by_downloader_user_id(ssn, user_id, is_active=True)
             if session:
                 account_id = session[0].account_id
                 is_login = True
             else:
                 is_login = False
+
+            args = update.effective_message.text.split()
+            if len(args) == 2 and "link" in args[1]:
+                try:
+                    ad_id = int(args[1].split("-")[1])
+
+                    if is_login:
+                        ad = CRUDAd.get_by_id(ssn, ad_id)
+                        if ad.status != AdStatus.ACTIVE:
+                            raise Exception()
+                        CRUDDownloaderUser.update_state_data(ssn, str(user_chat_id), f"{ad.category_title};{ad_id}")
+                        await ActiveAdsMessage.ad_details(update,context,from_start=True)
+                        raise ApplicationHandlerStop()
+                except ApplicationHandlerStop:
+                    raise ApplicationHandlerStop()
+                except Exception as e:
+                    pass
 
         # ==============================================
         if is_login:
@@ -123,9 +141,6 @@ class AdminCommand:
 
         if user_chat_id == owner_chat_id:
 
-
-
-
             with Database.get_session() as session:
 
                 # Check is Created Account Before
@@ -141,7 +156,7 @@ class AdminCommand:
                     raise ApplicationHandlerStop()
 
                 password = Password.generate_password()
-                account_id = CRUDAccount.create(session, str(user_chat_id), Password.hash_password(password), role=AccountRole.ADMIN)
+                account_id = CRUDAccount.create(session, str(user_chat_id), Password.hash_password(password), role=AccountRole.ADMIN, linked_username={})
                 user_id = CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id)).id
                 CRUDSession.create(session, account_id, user_id)
 

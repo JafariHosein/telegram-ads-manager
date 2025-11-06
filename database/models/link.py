@@ -1,3 +1,4 @@
+
 from datetime import datetime
 
 from sqlalchemy.dialects.postgresql import JSONB
@@ -5,7 +6,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import DateTime, Integer, ForeignKey, Boolean, String, Float
 
 from database.base import Base
-
 
 class Link(Base):
     __tablename__ = "links"
@@ -18,6 +18,7 @@ class Link(Base):
     members: Mapped[dict] = mapped_column(JSONB, nullable=False, default={})
     point: Mapped[float] = mapped_column(Float, nullable=False, default=0)
     count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    has_warning: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False, onupdate=datetime.now)
 

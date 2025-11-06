@@ -3,6 +3,7 @@ from telegram.ext import CallbackContext, ApplicationHandlerStop
 
 from database import Database, DownloaderDecorator, CRUDSetting, CRUDDownloaderUser
 from bot.keyboard import DownloaderInlineButtons
+from utils import DownloaderState
 
 
 class ContactSupportMessage:
@@ -11,6 +12,9 @@ class ContactSupportMessage:
     @DownloaderDecorator.callback()
     async def contact_support(update: Update, context: CallbackContext):
         with Database.get_session() as session:
+            CRUDDownloaderUser.update_state(session, str(update.effective_user.id), DownloaderState.START)
+            CRUDDownloaderUser.update_state_data(session, str(update.effective_user.id), "")
+
             data = CRUDSetting.get_all(session)
 
             message_text = ""

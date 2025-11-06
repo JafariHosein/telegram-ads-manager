@@ -27,8 +27,11 @@ class CRUDTransferRequest:
         return db.execute(statement).scalars().all()
 
     @staticmethod
-    def get_by_account_id(db: Session, account_id: int) -> Sequence[TransferRequest]:
-        statement = select(TransferRequest).where(TransferRequest.account_id == account_id)
+    def get_by_account_id(db: Session, account_id: int, status: TransferRequestStatus = None) -> Sequence[TransferRequest]:
+        if status:
+            statement = select(TransferRequest).where(TransferRequest.account_id == account_id,TransferRequest.status == status)
+        else:
+            statement = select(TransferRequest).where(TransferRequest.account_id == account_id)
         return db.execute(statement).scalars().all()
 
     @staticmethod

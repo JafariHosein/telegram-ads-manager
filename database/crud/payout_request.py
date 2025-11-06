@@ -34,8 +34,11 @@ class CRUDPayoutRequest:
         return db.execute(statement).scalars().first()
 
     @staticmethod
-    def get_by_account_id(db: Session, account_id: int) -> Sequence[PayoutRequest]:
-        statement = select(PayoutRequest).where(PayoutRequest.account_id == account_id)
+    def get_by_account_id(db: Session, account_id: int, status: PayoutRequestStatus = None) -> Sequence[PayoutRequest]:
+        if status:
+            statement = select(PayoutRequest).where(PayoutRequest.account_id == account_id, PayoutRequest.status == status)
+        else:
+            statement = select(PayoutRequest).where(PayoutRequest.account_id == account_id)
         return db.execute(statement).scalars().all()
 
     @staticmethod

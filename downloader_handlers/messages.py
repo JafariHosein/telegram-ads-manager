@@ -10,6 +10,9 @@ from downloader_handlers.requests import RequestsMessage
 from downloader_handlers.login import LoginMessage
 from downloader_handlers.contact_support import ContactSupportMessage
 from downloader_handlers.manage_ads import ManageAdsMessage
+from downloader_handlers.account_profile import AccountProfileMessage
+from downloader_handlers.manage_links import ManageLinksMessage
+from downloader_handlers.transfer import TransferMessage
 
 
 class AllMessages:
@@ -26,6 +29,8 @@ class AllMessages:
 
         elif user_state == DownloaderState.ENTER_REASON_FOR_REJECT:
             await RequestsMessage.change_register_request_status(update, context)
+        elif user_state == DownloaderState.ENTER_REASON_FOR_REJECT_TRANSFER:
+            await RequestsMessage.change_transfer_request_status(update, context)
 
         elif user_state == DownloaderState.GET_USERNAME:
             await LoginMessage.get_username(update, context)
@@ -45,3 +50,16 @@ class AllMessages:
             await ManageAdsMessage.edit_ad_text(update, context)
         elif user_state in [DownloaderState.SEARCH_WITH_AD_ID, DownloaderState.SEARCH_WITH_CHANNEL_CHAT_ID]:
             await ManageAdsMessage.search(update, context)
+
+        elif user_state == DownloaderState.ENTER_NEW_USERNAME:
+            await AccountProfileMessage.add_to_my_usernames(update, context)
+        elif user_state in [DownloaderState.ENTER_SHABA, DownloaderState.ENTER_CARD]:
+            await AccountProfileMessage.add_bank_account(update, context)
+
+        elif user_state == DownloaderState.ENTER_LINK_URL:
+            await ManageLinksMessage.search_link(update, context)
+
+        elif user_state in [DownloaderState.ENTER_ACCOUNT_ID, DownloaderState.ENTER_ACCOUNT_USERNAME]:
+            await TransferMessage.check_destination(update, context)
+        elif user_state == DownloaderState.ENTER_TRANSFER_VALUE:
+            await TransferMessage.validate_value(update, context)

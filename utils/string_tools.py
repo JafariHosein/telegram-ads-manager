@@ -22,12 +22,28 @@ class Regex:
         pattern = re.compile(r'^(?:(?:[1-9]|10)\s*->\s*\d+\s*(?:\r?\n|$)){1,10}$')
         return bool(pattern.fullmatch(text.strip()))
 
+    @staticmethod
+    def contains_persian(text: str) -> bool:
+        pattern = re.compile(r'[\u0600-\u06FF]')
+        return bool(pattern.search(text))
+
+    @staticmethod
+    def is_valid_shaba(sheba: str) -> bool:
+        pattern = r'^[0-9]{24}$'
+        return bool(re.fullmatch(pattern, sheba.strip()))
+
+    @staticmethod
+    def is_valid_card_number(card: str) -> bool:
+        pattern_plain = re.compile(r'^\d{16}$')
+        pattern_spaced = re.compile(r'^(?:\d{4}[ -]?){3}\d{4}$')
+        s = card.strip()
+        return bool(pattern_plain.fullmatch(s) or pattern_spaced.fullmatch(s))
 
 class Password:
 
     @staticmethod
     def generate_password() -> str:
-        length: int = 8
+        length: int = 12
 
         lower = string.ascii_lowercase
         upper = string.ascii_uppercase
@@ -55,3 +71,18 @@ class Password:
         hashed = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
 
         return hashed.decode("utf-8")
+
+
+class Text:
+
+    @staticmethod
+    def number_to_emoji(number: int) -> str:
+        emoji_list = {0: "0️⃣", 1: "1️⃣", 2: "2️⃣", 3: "3️⃣", 4: "4️⃣", 5: "5️⃣", 6: "6️⃣", 7: "7️⃣", 8: "8️⃣", 9: "9️⃣"}
+        number = str(number)
+
+        for n in number:
+            for num, emoji in emoji_list.items():
+                if n == str(num):
+                    number = number.replace(n, emoji)
+
+        return number

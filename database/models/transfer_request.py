@@ -12,6 +12,11 @@ class TransferRequestStatus(enum.Enum):
     COMPLETED = "completed"
     REJECTED = "rejected"
 
+class TransferRequestStatusFarsi(enum.Enum):
+    PENDING = "🕓 در انتظار تأیید"
+    COMPLETED = "✅ تأیید شده"
+    REJECTED = "❌ رد شده"
+
 
 class TransferRequest(Base):
     __tablename__ = "transfer_requests"

@@ -1,0 +1,473 @@
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.constants import ParseMode
+from telegram.ext import CallbackContext, ApplicationHandlerStop
+import jdatetime
+
+from bot.keyboard import DownloaderInlineButtons, DownloaderReplyButtons
+from database import DownloaderDecorator, Database, CRUDDownloaderUser, CRUDSession, CRUDAccount, CRUDLink, CRUDAd, AdLinkTypeFarsi, AdStatus, Account, CRUDBankAccount, BankAccountTypeFarsi, BankAccountType
+from utils import DownloaderState, NumberTools, Password, Pagination, Regex
+
+
+class AccountProfileMessage:
+
+    @staticmethod
+    @DownloaderDecorator.message(login_require=True)
+    async def account_profile(update: Update, context: CallbackContext, returned: bool = False):
+        user_chat_id = update.effective_user.id
+
+        with Database.get_session() as session:
+            CRUDDownloaderUser.update_state(session, str(user_chat_id), DownloaderState.START)
+            CRUDDownloaderUser.update_state_data(session, str(user_chat_id), "")
+
+            user = CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id))
+            account_session = CRUDSession.get_by_downloader_user_id(session, user.id)[0]
+            account = CRUDAccount.get_by_id(session, account_session.account_id)
+
+            message_text = "👤 حساب کاربری" + "\n\n" + "<blockquote>"
+            message_text += "- " + "🧾" + " " + "شماره حساب کاربری" + " : " + str(account.id) + "\n\n"
+            message_text += "- " + "🧑‍💻" + " " + "نام کاربری" + " : " + account.username + "\n\n"
+            message_text += "- " + "💵" + " " + "موجودی" + " : " + NumberTools.format_number(account.balance).replace("-", "منفی ") + " تومان"
+
+            links = CRUDLink.get_by_account_id(session, account.id)
+            if links:
+                value = 0
+                for link in links:
+                    ad = CRUDAd.get_by_id(session, link.ad_id)
+                    if ad.status in [AdStatus.ACTIVE, AdStatus.UNVERIFIED]:
+                        value += (link.count * ad.rate) / 100
+                message_text += "\n\n" + "- " + "🟢 " + "درآمد تبلیغ های فعال شما : " + NumberTools.format_number(value) + " تومان"
+
+            shamsi_date = jdatetime.datetime.fromgregorian(datetime=account.created_at)
+            shamsi_date = shamsi_date.strftime('%Y/%m/%d')
+            shamsi_date = str(shamsi_date).replace("-", "/")
+            message_text += "\n\n" + "- " + "📅" + " " + "تاریخ ساخت" + " : " + shamsi_date
+            message_text += "</blockquote>"
+            message_text += "\n\n" + "🔴 توجه : " + "\n" + "- لطفاً از به‌اشتراک‌گذاری نام کاربری و رمز عبور خود با دیگران خودداری کنید. در صورت بروز خطا یا از دست رفتن حساب کاربری بر اثر این اقدام، مجموعه هیچ‌گونه مسئولیتی نخواهد داشت."
+            message_text += "\n\n" + "- رمز عبور شما پس از تأیید درخواست، برای شما ارسال شد و دیگر قابل مشاهده نیست. در صورت فراموشی رمز، از گزینه‌ی «تغییر رمز عبور» استفاده کنید."
+
+            if returned:
+                await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, parse_mode=ParseMode.HTML,
+                                                    reply_markup=DownloaderInlineButtons.account_profile)
+            else:
+                msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, parse_mode=ParseMode.HTML, reply_markup=DownloaderInlineButtons.account_profile)
+                CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
+
+        raise ApplicationHandlerStop()
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True)
+    async def change_password(update: Update, context: CallbackContext):
+        user_chat_id = update.effective_user.id
+
+        data = update.callback_query.data
+
+        if data == "ChangeMyPassword":
+            message_text = "⭕️ " + "آیا از تغییر رمز عبور خود اطمینان دارید؟" + "\n\n"
+            message_text += "در صورت تغییر، رمز عبور قبلی نامعتبر خواهد شد."
+            await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.change_password_question)
+
+        elif "YesChangePassword" in data:
+            with Database.get_session() as session:
+                user = CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id))
+                account_session = CRUDSession.get_by_downloader_user_id(session, user.id)[0]
+                account = CRUDAccount.get_by_id(session, account_session.account_id)
+                password = Password.generate_password()
+                hashed_password = Password.hash_password(password)
+                CRUDAccount.update_password(session, account.id, hashed_password)
+
+                message_text = "✅ رمز عبور شما با موفقیت تغییر پیدا کرد"
+                message_text += "\n\n" + "رمز عبور جدید : " + "\n" + "<blockquote>" + f"<code>{password}</code>" + "</blockquote>" + "\n\n"
+                message_text += "⚠️ لطفاً حتماً رمز عبور خود را ذخیره کنید."
+                await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, parse_mode=ParseMode.HTML,
+                                                    text=message_text, reply_markup=DownloaderInlineButtons.return_to_account_profile)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True)
+    async def logout(update: Update, context: CallbackContext):
+        user_chat_id = update.effective_user.id
+
+        data = update.callback_query.data
+
+        if data == "Logout":
+            message_text = "⭕️ " + "آیا مطمئن هستید که می‌خواهید از حساب کاربری خود خارج شوید؟" + "\n\n"
+            message_text += "در صورت خروج، می‌توانید با نام کاربری و رمز عبور خود دوباره وارد شوید."
+            await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.logout_question)
+
+        elif "YesLogout" in data:
+            with Database.get_session() as session:
+                user = CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id))
+                account_session = CRUDSession.get_by_downloader_user_id(session, user.id)[0]
+                account = CRUDAccount.get_by_id(session, account_session.account_id)
+                CRUDSession.deactivate(session, account_id=account.id)
+
+                message_text = "⌛️ کمی صبر کنید"
+                msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, parse_mode=ParseMode.HTML, reply_markup=DownloaderReplyButtons.new_user)
+                await context.bot.delete_message(chat_id=user_chat_id, message_id=msg.id)
+
+                message_text = "✅ شما با موفقیت از حساب کاربری خود خارج شدید."
+                await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_start)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True)
+    async def my_links(update: Update, context: CallbackContext):
+        user_chat_id = update.effective_user.id
+
+        with Database.get_session() as session:
+            user = CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id))
+            account_session = CRUDSession.get_by_downloader_user_id(session, user.id)[0]
+            account = CRUDAccount.get_by_id(session, account_session.account_id)
+            raw_links = CRUDLink.get_by_account_id(session, account.id)
+
+            if not raw_links:
+                message_text = "⭕️ " + "شما هنوز لینک اختصاصی دریافت نکرده‌اید." + "\n\n"
+                message_text += "برای دریافت لینک، از منوی «تبلیغات فعال» اقدام کنید."
+                await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_account_profile)
+                return
+
+            links = []
+            for link in raw_links:
+                ad = CRUDAd.get_by_id(session, link.ad_id)
+                if ad.status in [AdStatus.ACTIVE, AdStatus.UNVERIFIED]:
+                    links.append(link)
+
+            if "GoToPreviousMyLinks" in update.callback_query.data:
+                page_number = int(update.callback_query.data.split("*")[1])
+            elif "GoToNextViewMyLinks" in update.callback_query.data:
+                page_number = int(update.callback_query.data.split("*")[1])
+            else:
+                page_number = 1
+
+            link_callback = "ViewThisLink"
+            properties = [["ad_id", "- 🔢 شماره تبلیغ"], ["url", "- 🔗 لینک"], ["count", "- 👥 تعداد ممبر عضو شده"]]
+            buttons_callback = ["GoToPreviousMyLinks", "GoToNextViewMyLinks", "ReturnToAccountProfile"]
+            show_number = 12
+            count = 3
+
+            text = "👇 جهت مشاهده جزئیات بیشتر بر روی شماره تبلیغ مورد نظر کلیک کنید"
+
+            markup, message_text = Pagination.paginate(links, callback_data=link_callback, properties=properties, page=page_number, count=count, show_number=show_number, buttons_callback=buttons_callback,
+                                                       end_text=text, callback_number_name="id")
+            await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=markup, parse_mode=ParseMode.HTML)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True)
+    async def view_link(update: Update, context: CallbackContext):
+        user_chat_id = update.effective_user.id
+        link_id = int(update.callback_query.data.split("*")[1])
+
+        with Database.get_session() as session:
+            link = CRUDLink.get_by_id(session, link_id)
+            ad = CRUDAd.get_by_id(session, link.ad_id)
+
+            all_count = 0
+            all_link = CRUDLink.get_by_ad_id(session, ad.id)
+            for link2 in all_link:
+                all_count += link2.count
+
+            message_text = "🔗 جزئیات لینک شما : " + "\n" + "<blockquote>"
+            message_text += "- آدرس لینک : " + "\n" + link.url + "\n\n"
+            message_text += "- تعداد ممبر عضو شده : " + NumberTools.format_number(link.count)
+            if link.count > 0:
+                message_text += "\n\n" + "- مبلغ شما : " + NumberTools.format_number((link.count * ad.rate) / 100) + " تومان"
+            message_text += "</blockquote>"
+
+            message_text += "\n\n" + "🔺 جزئیات تبلیغ : " + f"{ad.id}#" + "\n" + "<blockquote>"
+            message_text += "- 📢 لینک کانال : " + "\n" + ad.channel_link + "\n"
+            message_text += "- 🏷️ نام کانال : " + ad.channel_name + "\n\n"
+
+            message_text += "- 💰 نرخ : " + NumberTools.format_number(ad.rate) + " تومان برای هر 100 نفر" + "\n\n"
+            message_text += "- 📦 ظرفیت کل : " + NumberTools.format_number(ad.capacity) + "\n"
+            if ad.status == AdStatus.ACTIVE:
+                message_text += "- 🔋 ظرفیت باقی مانده : " + (NumberTools.format_number(ad.capacity - all_count) if (ad.capacity - all_count) >= 0 else '0') + "\n\n"
+            message_text += "- 🔢 آیدی عددی کانال : " + f"<code>{ad.channel_chat_id}</code>"
+
+            message_text += "\n\n" + "- 📝 توضیحات : " + ad.description
+            message_text += "</blockquote>"
+
+            if link.count > 0:
+                message_text += "\n\n" + "🔴 آیا مبلغ به موجودی من اضافه شده است؟" + "\n"
+                if ad.status == AdStatus.COMPLETED:
+                    message_text += "✅ بله"
+                else:
+                    message_text += "◾️ نه هنوز" + " پس از حسابرسی به شما اعلام میشود"
+
+            await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, parse_mode=ParseMode.HTML,
+                                                reply_markup=DownloaderInlineButtons.return_to_my_links)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True)
+    async def my_usernames(update: Update, context: CallbackContext):
+        user_chat_id = update.effective_user.id
+
+        with Database.get_session() as session:
+            user = CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id))
+            account_session = CRUDSession.get_by_downloader_user_id(session, user.id)[0]
+            account = CRUDAccount.get_by_id(session, account_session.account_id)
+
+            if not account.linked_username:
+                message_text = "🔴 هنوز هیچ کانال یا رباتی که مالک آن باشید ثبت نکرده‌اید."
+                await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.no_linked_username)
+                return
+
+            counter = 1
+            message_text = "لیست کانال یا ربات هایی که مالک آن هستید : " + "\n" + "<blockquote>"
+            for username, _ in account.linked_username.items():  # NOQA
+                message_text += f"{counter}. {username}" + "\n"
+                counter += 1
+            message_text += "</blockquote>"
+            await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, parse_mode=ParseMode.HTML,
+                                                reply_markup=DownloaderInlineButtons.linked_username)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True)
+    async def add_to_my_usernames(update: Update, context: CallbackContext):
+        user_chat_id = update.effective_user.id
+
+        if update.callback_query:
+            with Database.get_session() as session:
+                CRUDDownloaderUser.update_state(session, str(update.effective_user.id), DownloaderState.ENTER_NEW_USERNAME)
+            message_text = "▫️ یوزنیم کانال یا رباتی که مالک آن هستید را ارسال کنید"
+            await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, parse_mode=ParseMode.HTML,
+                                                reply_markup=DownloaderInlineButtons.return_to_usernames)
+        elif update.effective_message.text:
+            text = update.effective_message.text
+            if not Regex.is_username(text):
+                message_text = "❌ متن ارسالی نامعتبر"
+                message_text += "\n\n" + "- یوزنیم معتبر ارسال کنید."
+                msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_usernames)
+                with Database.get_session() as session:
+                    CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
+                return
+
+            with Database.get_session() as session:
+                user = CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id))
+                account_session = CRUDSession.get_by_downloader_user_id(session, user.id)[0]
+                account = CRUDAccount.get_by_id(session, account_session.account_id)
+
+                if Regex.contains_exact(" ".join(account.linked_username.keys() if account.linked_username else [""]), text):  # NOQA
+                    message_text = "❌ این یوزرنیم را قبلا ثبت کرده اید"
+                    message_text += "\n\n" + "- یوزنیم جدید ارسال کنید."
+                    msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_usernames)
+                    CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
+                    return
+
+                if text.endswith("bot"):
+                    CRUDAccount.add_linked_username(session, account.id, {text: "bot"})
+                else:
+                    CRUDAccount.add_linked_username(session, account.id, {text: "channel"})
+                    CRUDDownloaderUser.update_state(session, str(user_chat_id), DownloaderState.START)
+
+                message_text = "✅ افزوده شد"
+                msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_usernames)
+                CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True)
+    async def remove_from_my_usernames(update: Update, context: CallbackContext):
+        user_chat_id = update.effective_user.id
+        data = update.callback_query.data
+
+        if data == "DeleteAccountLinkedUsername":
+            with Database.get_session() as session:
+                user = CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id))
+                account_session = CRUDSession.get_by_downloader_user_id(session, user.id)[0]
+                account = CRUDAccount.get_by_id(session, account_session.account_id)
+
+                message_text = "⭕️ بر روی گزینه مورد نظر جهت حذف کلیک کنید"
+                buttons = []
+                for username, _ in account.linked_username.items():  # NOQA
+                    buttons.append([InlineKeyboardButton(username, callback_data=f"DeleteThisFromAccountUsernames*{username}")])
+
+                buttons.append([InlineKeyboardButton("🔙 بازگشت", callback_data="ReturnToAccountProfileUsernames")])
+                markup = InlineKeyboardMarkup(buttons)
+                await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, parse_mode=ParseMode.HTML,
+                                                    reply_markup=markup)
+        elif "DeleteThisFromAccountUsernames" in data:
+            username = update.callback_query.data.split("*")[1]
+            with Database.get_session() as session:
+                user = CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id))
+                account_session = CRUDSession.get_by_downloader_user_id(session, user.id)[0]
+                account = CRUDAccount.get_by_id(session, account_session.account_id)
+                CRUDAccount.remove_linked_username(session, account.id, username)
+
+                await update.callback_query.answer("✅ حذف شد", show_alert=True)
+                await AccountProfileMessage.my_usernames(update, context)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True)
+    async def my_bank_account(update: Update, context: CallbackContext):
+        user_chat_id = update.effective_user.id
+
+        with Database.get_session() as session:
+            user = CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id))
+            account_session = CRUDSession.get_by_downloader_user_id(session, user.id)[0]
+            account = CRUDAccount.get_by_id(session, account_session.account_id)
+            bank_accounts = CRUDBankAccount.get_by_account_id(session, account.id)
+
+            if not bank_accounts:
+                message_text = "⭕️ در حال حاضر حساب بانکی که مالک آن باشید را ثبت نکرده اید"
+                await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.my_bank_account_empty)
+                return
+
+            message_text = "حساب های بانکی شما : " + "\n\n"
+
+            cards = []
+            shabas = []
+
+            for bank_account in bank_accounts:
+                if bank_account.type == BankAccountType.SHABA:
+                    shabas.append(bank_account)
+                else:
+                    cards.append(bank_account)
+
+            card_counter = 1
+            if cards:
+                message_text += "شماره کارت ها : " + "\n"
+                message_text += "<blockquote>"
+                for card in cards:
+                    message_text += f"{card_counter}. " + f"<code>{card.value}</code>" + "\n"
+                    card_counter += 1
+                message_text += "</blockquote>" + "\n"
+
+            shaba_counter = 1
+            if shabas:
+                message_text += "شماره شبا ها : " + "\n"
+                message_text += "<blockquote>"
+                for shaba in shabas:
+                    message_text += f"{shaba_counter}. " + f"<code>{shaba.value}</code>" + "\n"
+                    shaba_counter += 1
+                message_text += "</blockquote>" + "\n"
+
+            await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.my_bank_account, parse_mode=ParseMode.HTML)
+            return
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True)
+    async def add_bank_account(update: Update, context: CallbackContext):
+        user_chat_id = update.effective_user.id
+
+        if update.callback_query:
+            data = update.callback_query.data
+
+            if data == "AddBankAccount":
+
+                with Database.get_session() as session:
+                    user = CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id))
+                    account_session = CRUDSession.get_by_downloader_user_id(session, user.id)[0]
+                    account = CRUDAccount.get_by_id(session, account_session.account_id)
+                    records = CRUDBankAccount.get_by_account_id(session, account.id)
+                    if len(records) >= 20:
+                        message_text = "❌ نمیتوان بیشتر از 20 حساب بانکی داشت."
+                        await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.my_bank_account_type)
+                        return
+
+                message_text = "▫️ چه نوعی رو میخواهید اضافه کنید؟"
+                await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.my_bank_account_type)
+                return
+
+            elif data == "AddShabaBankAccount":
+                with Database.get_session() as session:
+                    CRUDDownloaderUser.update_state(session, str(user_chat_id), DownloaderState.ENTER_SHABA)
+
+                message_text = "🔺 شماره شبا خود را وارد کنید" + "\n\n" + "- نمونه : 180170000000205511280008" + "\n" + "- توجه : IR را ننویسید."
+                await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_bank_account)
+                return
+
+            elif data == "AddCardBankAccount":
+                with Database.get_session() as session:
+                    CRUDDownloaderUser.update_state(session, str(user_chat_id), DownloaderState.ENTER_CARD)
+
+                message_text = "🔺 شماره کارت خود را وارد کنید" + "\n\n" + "- نمونه : 6361147010095732"
+                await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_bank_account)
+                return
+
+        elif update.effective_message.text:
+            text = update.effective_message.text.strip()
+
+            with Database.get_session() as session:
+                user = CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id))
+                account_session = CRUDSession.get_by_downloader_user_id(session, user.id)[0]
+                account = CRUDAccount.get_by_id(session, account_session.account_id)
+
+                if user.state == DownloaderState.ENTER_SHABA:
+
+                    if not Regex.is_valid_shaba(text):
+                        message_text = "❌ شماره شبا وارد شده نامعتبر است" + "\n\n" + "🔺 شماره شبا خود را دوباره وارد کنید" + "\n\n" + "- نمونه : 180170000000205511280008" + "\n" + "- توجه : IR را ننویسید."
+                        msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_bank_account)
+                        CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
+                        return
+
+                    record = CRUDBankAccount.get_by_value(session, account.id, text)
+
+                    if record:
+                        message_text = "❌ شماره شبا وارد شده تکراری است" + "\n\n" + "🔺 شماره شبا خود را دوباره وارد کنید" + "\n\n" + "- نمونه : 180170000000205511280008" + "\n" + "- توجه : IR را ننویسید."
+                        msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_bank_account)
+                        CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
+                        return
+
+                    CRUDBankAccount.create(session, account.id, type=BankAccountType.SHABA, value=text)
+                    CRUDDownloaderUser.update_state(session, str(user_chat_id), DownloaderState.START)
+                    message_text = "✅ شماره شبا وارد شده اضافه شد"
+                    msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_bank_account)
+                    CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
+
+                elif user.state == DownloaderState.ENTER_CARD:
+                    if not Regex.is_valid_card_number(text):
+                        message_text = "❌ شماره کارت وارد شده نامعتبر است" + "\n\n" + "🔺 شماره کارت خود را دوباره وارد کنید" + "\n\n" + "- نمونه : 6361147010095732"
+                        msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_bank_account)
+                        CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
+                        return
+
+                    record = CRUDBankAccount.get_by_value(session, account.id, text)
+
+                    if record:
+                        message_text = "❌ شماره کارت وارد شده تکراری است" + "\n\n" + "🔺 شماره کارت خود را دوباره وارد کنید" + "\n\n" + "- نمونه : 6361147010095732"
+                        msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_bank_account)
+                        CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
+                        return
+
+                    CRUDBankAccount.create(session, account.id, type=BankAccountType.CARD, value=text)
+                    CRUDDownloaderUser.update_state(session, str(user_chat_id), DownloaderState.START)
+                    message_text = "✅ شماره کارت وارد شده اضافه شد"
+                    msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_bank_account)
+                    CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True)
+    async def remove_bank_account(update: Update, context: CallbackContext):
+        user_chat_id = update.effective_user.id
+
+        data = update.callback_query.data
+
+        if data == "RemoveBankAccount":
+            with Database.get_session() as session:
+                user = CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id))
+                account_session = CRUDSession.get_by_downloader_user_id(session, user.id)[0]
+                account = CRUDAccount.get_by_id(session, account_session.account_id)
+                bank_accounts = CRUDBankAccount.get_by_account_id(session, account.id)
+
+                message_text = "⭕️ جهت حذف بر روی دکمه مورد نظر کلیک کنید"
+                buttons = []
+                for bank_account in bank_accounts:
+                    buttons.append([InlineKeyboardButton(f"{bank_account.value}", callback_data=f"RemoveThisBankAccount*{bank_account.id}")])
+
+                buttons.append([InlineKeyboardButton("🔙 بازگشت", callback_data="ReturnToBankAccount")])
+                markup = InlineKeyboardMarkup(buttons)
+
+                await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=markup)
+
+        elif "RemoveThisBankAccount" in data:
+            bank_account_id = int(data.split("*")[1])
+
+            with Database.get_session() as session:
+                CRUDBankAccount.delete(session, bank_account_id)
+
+                await update.callback_query.answer("✅ حذف شد", show_alert=True)
+                await AccountProfileMessage.my_bank_account(update, context)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True)
+    async def return_to_account_profile(update: Update, context: CallbackContext):
+        with Database.get_session() as session:
+            CRUDDownloaderUser.update_state(session, str(update.effective_user.id), DownloaderState.START)
+        await AccountProfileMessage.account_profile(update, context, True)

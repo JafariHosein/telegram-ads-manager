@@ -47,6 +47,11 @@ class CRUDAccount:
         return db.execute(statement).scalars().first()
 
     @staticmethod
+    def get_by_username(db: Session, username: str) -> Account | None:
+        statement = select(Account).where(Account.username == username)
+        return db.execute(statement).scalars().first()
+
+    @staticmethod
     def get_by_role(db: Session, role: AccountRole) -> Sequence[Account]:
         statement = select(Account).where(Account.role == role)
         return db.execute(statement).scalars().all()

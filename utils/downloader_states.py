@@ -33,6 +33,7 @@ class DownloaderState(str, enum.Enum):
     FROM_NEW_AD = "from new ad"
     FROM_VIEW_ALL_ADS = "from view all ads"
     FROM_VIEW_ACTIVE_ADS = "from view active ads"
+    FROM_VIEW_INACTIVE_ADS = "from view inactive ads"
     FROM_VIEW_VERIFIED_ADS = "from view verified ads"
     FROM_VIEW_NOT_VERIFIED_ADS = "from view not verified ads"
 
@@ -46,3 +47,19 @@ class DownloaderState(str, enum.Enum):
 
     # Admin
     ENTER_REASON_FOR_REJECT = "enter reason for reject"
+    ENTER_REASON_FOR_REJECT_TRANSFER = "enter reason for reject transfer"
+
+    # New Username
+    ENTER_NEW_USERNAME = "enter new username"
+
+    # Manage Link
+    ENTER_LINK_URL = "enter link url"
+
+    # Transfer
+    ENTER_ACCOUNT_ID = "enter account id"
+    ENTER_ACCOUNT_USERNAME = "enter account username"
+    ENTER_TRANSFER_VALUE = "enter transfer value"
+
+    # Bank Account
+    ENTER_SHABA = "enter shaba"
+    ENTER_CARD = "enter card"

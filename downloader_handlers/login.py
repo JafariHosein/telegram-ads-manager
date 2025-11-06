@@ -2,8 +2,8 @@ from telegram import Update
 from telegram.ext import CallbackContext, ApplicationHandlerStop
 from telegram.constants import ParseMode, ReactionEmoji
 
-from database import Database, DownloaderDecorator, CRUDDownloaderUser, CRUDRegisterRequest, RegisterRequestStatus, CRUDAccount, UpdateType, CRUDSession, CRUDSetting
-from bot.keyboard import DownloaderInlineButtons
+from database import Database, DownloaderDecorator, CRUDDownloaderUser, CRUDRegisterRequest, RegisterRequestStatus, CRUDAccount, UpdateType, CRUDSession, CRUDSetting, AccountRole
+from bot.keyboard import DownloaderInlineButtons, DownloaderReplyButtons
 from utils import DownloaderState, CaptchaTools, Password
 
 
@@ -157,16 +157,22 @@ class LoginMessage:
                     message_text += "\n\n" + "با توجه به اینکه هر اکانت تنها برای یک نفر قابل استفاده همزمان است، شما از سیستم خارج شدید."
                     target_user_chat_id = CRUDDownloaderUser.get_by_id(session, old_session.downloader_user_id).chat_id
                     try:
-                        msg = await context.bot.send_message(chat_id=target_user_chat_id, text=message_text)
+                        msg = await context.bot.send_message(chat_id=target_user_chat_id, text=message_text, reply_markup=DownloaderReplyButtons.new_user)
                         CRUDDownloaderUser.update_bot_last_message_id(session, target_user_chat_id, msg.id)
                     except:
                         continue
 
                 user_id = CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id)).id
                 CRUDSession.create(session, account_id, user_id)
-                message_text = "🎉 شما با موفقیت وارد حساب کاربری خود شدید!" + "\n\n" + "برای بروزرسانی منوی ربات، لطفاً روی دکمه‌ی «متوجه شدم» کلیک کنید."
+                message_text = "🎉 شما با موفقیت وارد حساب کاربری خود شدید!"
 
-                msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=DownloaderInlineButtons.i_saved_my_password)
+                # Temp
+                account = CRUDAccount.get_by_id(session, account_id)
+                markup = DownloaderReplyButtons.downloader
+                if account.role == AccountRole.ADMIN:
+                    markup = DownloaderReplyButtons.admin
+
+                msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=markup)
                 CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
 
 

@@ -11,6 +11,10 @@ class BankAccountType(enum.Enum):
     SHABA = "shaba"
     CARD = "card"
 
+class BankAccountTypeFarsi(enum.Enum):
+    SHABA = "شبا"
+    CARD = "شماره کارت"
+
 
 class BankAccount(Base):
     __tablename__ = "bank_accounts"
