@@ -24,7 +24,7 @@ class TransferMessage:
             records = CRUDTransferRequest.get_by_account_id(session, my_account.id, TransferRequestStatus.PENDING)
             records2 = CRUDPayoutRequest.get_by_account_id(session, my_account.id, PayoutRequestStatus.PENDING)
             if records or records2:
-                message_text = "⭕️ در حال حاضر یک درخواست انتقال یا برداست که در انتظار تایید هست دارید و نمیتوانید درخواست جدیدی ثبت کنید"
+                message_text = "⭕️ در حال حاضر یک درخواست انتقال یا برداشت که در انتظار تایید هست دارید و نمیتوانید درخواست جدیدی ثبت کنید"
 
                 if returned:
                     await context.bot.edit_message_text(chat_id=update.effective_chat.id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_start,

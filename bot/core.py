@@ -7,7 +7,7 @@ from config import Config
 from utils import Logger
 from bot.keyboard import DownloaderReplyButtons
 from downloader_handlers import StartCommand, AdminCommand, RegisterMessage, AllMessages, RequestsMessage, LoginMessage, ContactSupportMessage, ManageAdsMessage, ActiveAdsMessage, ChatMember, AccountProfileMessage, \
-    ManageLinksMessage,TransferMessage
+    ManageLinksMessage, TransferMessage, PayoutMessage, OnlinePriceMessage, SettingsMessage, AccountsMessage, UsersMessage,StatisticsMessage
 from database.decorators import DownloaderDecorator
 
 
@@ -44,6 +44,12 @@ class DownloaderBot:
         bot.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE & filters.Regex(fr"^{DownloaderReplyButtons.words["AccountProfile"]}$"), AccountProfileMessage.account_profile))
         bot.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE & filters.Regex(fr"^{DownloaderReplyButtons.words["LinkManager"]}$"), ManageLinksMessage.manage_links))
         bot.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE & filters.Regex(fr"^{DownloaderReplyButtons.words["TransferBalance"]}$"), TransferMessage.transfer))
+        bot.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE & filters.Regex(fr"^{DownloaderReplyButtons.words["PayoutBalance"]}$"), PayoutMessage.payout))
+        bot.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE & filters.Regex(fr"^{DownloaderReplyButtons.words["CryptoOnline"]}$"), OnlinePriceMessage.online_price))
+        bot.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE & filters.Regex(fr"^{DownloaderReplyButtons.words["Settings"]}$"), SettingsMessage.settings))
+        bot.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE & filters.Regex(fr"^{DownloaderReplyButtons.words["Accounts"]}$"), AccountsMessage.accounts))
+        bot.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE & filters.Regex(fr"^{DownloaderReplyButtons.words["Users"]}$"), UsersMessage.users))
+        bot.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE & filters.Regex(fr"^{DownloaderReplyButtons.words["Stats"]}$"), StatisticsMessage.statistics))
 
         # MessageHandlers --- Group 2
         bot.add_handler(MessageHandler(filters.ChatType.PRIVATE, AllMessages.message), group=2)
@@ -87,6 +93,23 @@ class DownloaderBot:
         bot.add_handler(CallbackQueryHandler(RequestsMessage.change_transfer_request_status, pattern=r"^CompleteThisTransferRequest\*[a-zA-Z0-9_]+$"))
         bot.add_handler(CallbackQueryHandler(RequestsMessage.change_transfer_request_status, pattern=r"^SkipReasonForRejectedTransferRequest\*[a-zA-Z0-9_]+$"))
         bot.add_handler(CallbackQueryHandler(RequestsMessage.change_transfer_request_status, pattern=r"^RejectThisTransferRequest\*[a-zA-Z0-9_]+$"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.payout_requests, pattern="PayoutsMenu"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.pending_payout_requests, pattern="PendingPayoutRequests"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.pending_payout_requests, pattern="GoToNextPendingPayoutRequests"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.pending_payout_requests, pattern="GoToPreviousPendingPayoutRequests"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.pending_payout_requests, pattern=r"^ShowThisPendingPayoutRequest\*[a-zA-Z0-9_]+$"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.completed_payout_requests, pattern="CompletedPayoutRequests"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.completed_payout_requests, pattern="GoToNextCompletedPayoutRequests"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.completed_payout_requests, pattern="GoToPreviousCompletedPayoutRequests"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.completed_payout_requests, pattern=r"^ShowThisCompletedPayoutRequest\*[a-zA-Z0-9_]+$"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.rejected_payout_requests, pattern="RejectedPayoutRequests"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.rejected_payout_requests, pattern="GoToNextRejectedPayoutRequests"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.rejected_payout_requests, pattern="GoToPreviousRejectedPayoutRequests"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.rejected_payout_requests, pattern=r"^ShowThisRejectedPayoutRequest\*[a-zA-Z0-9_]+$"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.change_payout_request_status, pattern=r"^CompleteThisPayoutRequest\*[a-zA-Z0-9_]+$"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.change_payout_request_status, pattern=r"^SkipReasonForRejectedPayoutRequest\*[a-zA-Z0-9_]+$"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.change_payout_request_status, pattern=r"^RejectThisPayoutRequest\*[a-zA-Z0-9_]+$"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.change_payout_request_status, pattern=r"^AutoTronThisPayoutRequest\*[a-zA-Z0-9_]+$"))
 
         bot.add_handler(CallbackQueryHandler(ManageAdsMessage.create_add, pattern="AddNewAd"))
         bot.add_handler(CallbackQueryHandler(ManageAdsMessage.create_add, pattern="IAdminBotForThisAd"))
@@ -159,6 +182,7 @@ class DownloaderBot:
         bot.add_handler(CallbackQueryHandler(AccountProfileMessage.add_bank_account, pattern="AddCardBankAccount"))
         bot.add_handler(CallbackQueryHandler(AccountProfileMessage.remove_bank_account, pattern="RemoveBankAccount"))
         bot.add_handler(CallbackQueryHandler(AccountProfileMessage.remove_bank_account, pattern="RemoveThisBankAccount"))
+        bot.add_handler(CallbackQueryHandler(AccountProfileMessage.my_history, pattern="MyAccountHistory"))
 
         bot.add_handler(CallbackQueryHandler(ManageLinksMessage.remove_link, pattern="DeleteThisLink"))
         bot.add_handler(CallbackQueryHandler(ManageLinksMessage.view_members, pattern="ViewThisLinkUsers"))
@@ -170,6 +194,47 @@ class DownloaderBot:
         bot.add_handler(CallbackQueryHandler(TransferMessage.transfer_with_username, pattern="TransferWithUsername"))
         bot.add_handler(CallbackQueryHandler(TransferMessage.submit, pattern="SubmitTransferRequest"))
 
+        bot.add_handler(CallbackQueryHandler(PayoutMessage.get_payout_value, pattern="PayoutWithTron"))
+        bot.add_handler(CallbackQueryHandler(PayoutMessage.get_payout_value, pattern="PayoutWithRial"))
+        bot.add_handler(CallbackQueryHandler(PayoutMessage.get_bank_account, pattern="SelectThisBankAccount"))
+        bot.add_handler(CallbackQueryHandler(PayoutMessage.submit, pattern="SubmitPayoutRequest"))
+
+        bot.add_handler(CallbackQueryHandler(SettingsMessage.edit, pattern="EditSettings"))
+        bot.add_handler(CallbackQueryHandler(SettingsMessage.view_balance, pattern="ViewTransferWalletBalance"))
+        bot.add_handler(CallbackQueryHandler(SettingsMessage.force_join, pattern="ForceJoin"))
+        bot.add_handler(CallbackQueryHandler(SettingsMessage.edit, pattern="EditThisSetting"))
+        bot.add_handler(CallbackQueryHandler(SettingsMessage.edit, pattern="EnableIsAutoTransfer"))
+        bot.add_handler(CallbackQueryHandler(SettingsMessage.edit, pattern="DisableIsAutoTransfer"))
+        bot.add_handler(CallbackQueryHandler(SettingsMessage.change_force_join, pattern="ChangeStatusForceJoinChannel"))
+        bot.add_handler(CallbackQueryHandler(SettingsMessage.remove_channel_to_force_join, pattern="RemoveForceJoinChannel"))
+        bot.add_handler(CallbackQueryHandler(SettingsMessage.add_channel_to_force_join, pattern="AddForceJoinChannel"))
+        bot.add_handler(CallbackQueryHandler(SettingsMessage.remove_channel_to_force_join, pattern="DeleteThisForceJoin"))
+
+        bot.add_handler(CallbackQueryHandler(AccountsMessage.edit_account, pattern="EditThisAccount"))
+        bot.add_handler(CallbackQueryHandler(AccountsMessage.edit_account, pattern="EditThisAccountStatus"))
+        bot.add_handler(CallbackQueryHandler(AccountsMessage.edit_account, pattern="EditThisAccountRole"))
+        bot.add_handler(CallbackQueryHandler(AccountsMessage.edit_account, pattern="EditThisAccountBalance"))
+        bot.add_handler(CallbackQueryHandler(AccountsMessage.edit_account, pattern="BanThisAccount"))
+        bot.add_handler(CallbackQueryHandler(AccountsMessage.edit_account, pattern="ActiveThisAccount"))
+        bot.add_handler(CallbackQueryHandler(AccountsMessage.edit_account, pattern="DownloaderThisAccount"))
+        bot.add_handler(CallbackQueryHandler(AccountsMessage.edit_account, pattern="AdminThisAccount"))
+        bot.add_handler(CallbackQueryHandler(AccountsMessage.change_password, pattern="ChangeThisAccountPassword"))
+        bot.add_handler(CallbackQueryHandler(AccountsMessage.send_message_to_account, pattern="SendMessageToThisAccount"))
+        bot.add_handler(CallbackQueryHandler(AccountsMessage.send_message_to_account, pattern="SendToThisAccount"))
+        bot.add_handler(CallbackQueryHandler(AccountsMessage.account_link, pattern="ViewLinksForThisAccount"))
+        bot.add_handler(CallbackQueryHandler(AccountsMessage.change_password, pattern="SendNewPasswordToUser"))
+        bot.add_handler(CallbackQueryHandler(AccountsMessage.account_link, pattern="GoToNextThisAccountLinks"))
+        bot.add_handler(CallbackQueryHandler(AccountsMessage.account_link, pattern="GoToPreviousThisAccountLinks"))
+
+        bot.add_handler(CallbackQueryHandler(UsersMessage.global_message, pattern="GlobalMessage"))
+        bot.add_handler(CallbackQueryHandler(UsersMessage.global_message, pattern="SendThisGlblMessage"))
+        bot.add_handler(CallbackQueryHandler(UsersMessage.block_list, pattern="BlockList"))
+        bot.add_handler(CallbackQueryHandler(UsersMessage.delete_from_block_list, pattern="RemoveThisUserToBlockList"))
+        bot.add_handler(CallbackQueryHandler(UsersMessage.delete_from_block_list, pattern="RemoveUserToBlockList"))
+        bot.add_handler(CallbackQueryHandler(UsersMessage.add_to_block_list, pattern="AddUserToBlockList"))
+        bot.add_handler(CallbackQueryHandler(UsersMessage.send_message_to_user, pattern="SendThisPrivateMessage"))
+        bot.add_handler(CallbackQueryHandler(UsersMessage.send_message_to_user, pattern="SendMessageToUser"))
+
         bot.add_handler(CallbackQueryHandler(DownloaderDecorator.i_joined, pattern="IJoinedForceJoins"))
 
         # -------- Return --------
@@ -180,6 +245,7 @@ class DownloaderBot:
         bot.add_handler(CallbackQueryHandler(RequestsMessage.return_to_requests, pattern="ReturnToRequests"))
         bot.add_handler(CallbackQueryHandler(RequestsMessage.return_to_register_requests, pattern="ReturnTo2RegisterRequests"))
         bot.add_handler(CallbackQueryHandler(RequestsMessage.return_to_transfer_requests, pattern="ReturnTo2TransferRequests"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.return_to_payout_requests, pattern="ReturnTo2PayoutRequests"))
         bot.add_handler(CallbackQueryHandler(RequestsMessage.return_to_pending_register_requests, pattern="ReturnToPendingRegisterRequests"))
         bot.add_handler(CallbackQueryHandler(RequestsMessage.return_to_approved_register_requests, pattern="ReturnToApprovedRegisterRequests"))
         bot.add_handler(CallbackQueryHandler(RequestsMessage.return_to_rejected_register_requests, pattern="ReturnToRejectedRegisterRequests"))
@@ -188,6 +254,10 @@ class DownloaderBot:
         bot.add_handler(CallbackQueryHandler(RequestsMessage.return_to_completed_transfer_requests, pattern="ReturnToCompletedTransferRequests"))
         bot.add_handler(CallbackQueryHandler(RequestsMessage.return_to_rejected_transfer_requests, pattern="ReturnToRejectedTransferRequests"))
         bot.add_handler(CallbackQueryHandler(RequestsMessage.return_to_show_transfer_request, pattern="ReturnToShowTransferRequest"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.return_to_show_payout_request, pattern="ReturnToShowPayoutRequest"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.return_to_pending_payout_requests, pattern="ReturnToPendingPayoutRequests"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.return_to_completed_payout_requests, pattern="ReturnToCompletedPayoutRequests"))
+        bot.add_handler(CallbackQueryHandler(RequestsMessage.return_to_rejected_payout_requests, pattern="ReturnToRejectedPayoutRequests"))
 
         bot.add_handler(CallbackQueryHandler(ManageAdsMessage.return_to_ad_category, pattern="ReturnToCategories"))
         bot.add_handler(CallbackQueryHandler(ManageAdsMessage.return_to_manage_ads, pattern="ReturnToManageAds"))
@@ -209,7 +279,16 @@ class DownloaderBot:
 
         bot.add_handler(CallbackQueryHandler(TransferMessage.return_to_transfer, pattern="ReturnToTransfer"))
 
+        bot.add_handler(CallbackQueryHandler(PayoutMessage.return_to_payout, pattern="ReturnToPayout"))
+
         bot.add_handler(CallbackQueryHandler(ManageLinksMessage.return_to_view_link_menu, pattern="ReturnToViewLinkMenu"))
+
+        bot.add_handler(CallbackQueryHandler(SettingsMessage.return_to_settings, pattern="ReturnToSettings"))
+
+        bot.add_handler(CallbackQueryHandler(AccountsMessage.return_to_accounts, pattern="ReturnToAccounts"))
+        bot.add_handler(CallbackQueryHandler(AccountsMessage.return_to_searched_account, pattern="ReturnToSearchedAccount"))
+
+        bot.add_handler(CallbackQueryHandler(UsersMessage.return_to_users, pattern="ReturnToUsers"))
 
         # ChatMemberHandlers
         bot.add_handler(ChatMemberHandler(ChatMember.new_change, ChatMemberHandler.CHAT_MEMBER))

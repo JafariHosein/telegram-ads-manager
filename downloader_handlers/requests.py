@@ -1,11 +1,13 @@
 import jdatetime
+from sqlalchemy.util import await_only
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.constants import ParseMode
 from telegram.ext import CallbackContext, ApplicationHandlerStop
 
 from bot.keyboard import DownloaderInlineButtons, DownloaderReplyButtons
-from utils import Pagination, Password, DownloaderState, NumberTools
-from database import Database, DownloaderDecorator, AccountRole, CRUDDownloaderUser, CRUDRegisterRequest, RegisterRequestStatus, RegisterRequestStatusFarsi, CRUDAccount, CRUDSession, CRUDTransferRequest, TransferRequestStatusFarsi, TransferRequestStatus, UpdateType
+from utils import Pagination, Password, DownloaderState, NumberTools, TronTools
+from database import (Database, DownloaderDecorator, AccountRole, CRUDDownloaderUser, CRUDRegisterRequest, RegisterRequestStatus, RegisterRequestStatusFarsi, CRUDAccount, CRUDSession, CRUDTransferRequest,
+                      TransferRequestStatusFarsi, TransferRequestStatus, UpdateType, CRUDPayoutRequest, PayoutRequestStatus, PayoutRequestTypeFarsi, PayoutRequestDestinationTypeFarsi, PayoutRequestDestinationType, CRUDBankAccount, PayoutRequestType, CRUDSetting)
 
 
 class RequestsMessage:
@@ -544,6 +546,316 @@ class RequestsMessage:
 
     @staticmethod
     @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
+    async def payout_requests(update: Update, context: CallbackContext):
+        user_chat_id = update.effective_user.id
+        with Database.get_session() as session:
+            message_text = "💰 برداشت ها"
+            message_text += "\n\n" + "<blockquote>"
+            message_text += "- تعداد درخواست های " + "(" + TransferRequestStatusFarsi.PENDING.value + ") : " + str(len(CRUDPayoutRequest.get_by_status(session, PayoutRequestStatus.PENDING))) + "\n"
+            message_text += "- تعداد درخواست های " + "(" + TransferRequestStatusFarsi.COMPLETED.value + ") : " + str(len(CRUDPayoutRequest.get_by_status(session, PayoutRequestStatus.COMPLETED))) + "\n"
+            message_text += "- تعداد درخواست های " + "(" + TransferRequestStatusFarsi.REJECTED.value + ") : " + str(len(CRUDPayoutRequest.get_by_status(session, PayoutRequestStatus.REJECTED)))
+            message_text += "</blockquote>"
+            message_text += "\n" + "⭕️ " + "برای دیدن درخواست‌های برداشت، وضعیت مورد نظر را انتخاب کنید تا درخواست‌های همان وضعیت نمایش داده شوند"
+            await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.payout_requests, parse_mode=ParseMode.HTML)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
+    async def pending_payout_requests(update: Update, context: CallbackContext):
+        user_chat_id = update.effective_user.id
+        callback_data = "ShowThisPendingPayoutRequest"
+        buttons_callback = ["GoToPreviousPendingPayoutRequests", "GoToNextPendingPayoutRequests", "ReturnTo2PayoutRequests"]
+        properties = [["id", "- شماره درخواست"], ["amount", "- مبلغ"], ["destination_type", "- مقصد واریز"]]
+
+        if callback_data in update.callback_query.data:
+            payout_request_id = int(update.callback_query.data.split("*")[1])
+            await RequestsMessage.__show_payout_request(update, context, payout_request_id, "ReturnToPendingPayoutRequests")
+            return
+
+        with Database.get_session() as session:
+            data = CRUDPayoutRequest.get_by_status(session, PayoutRequestStatus.PENDING)
+
+            if "GoToPreviousPendingPayoutRequests" in update.callback_query.data:
+                page_number = int(update.callback_query.data.split("*")[1])
+                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, page_number, 3)
+            elif "GoToNextPendingPayoutRequests" in update.callback_query.data:
+                page_number = int(update.callback_query.data.split("*")[1])
+                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, page_number, 3)
+            else:
+                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, 1, 3)
+
+        await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=markup, parse_mode=ParseMode.HTML)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
+    async def completed_payout_requests(update: Update, context: CallbackContext):
+        user_chat_id = update.effective_user.id
+        callback_data = "ShowThisCompletedPayoutRequest"
+        buttons_callback = ["GoToPreviousCompletedPayoutRequests", "GoToNextCompletedPayoutRequests", "ReturnTo2PayoutRequests"]
+        properties = [["id", "- شماره درخواست"], ["amount", "- مبلغ"], ["destination_type", "- مقصد واریز"]]
+
+        if callback_data in update.callback_query.data:
+            payout_request_id = int(update.callback_query.data.split("*")[1])
+            await RequestsMessage.__show_payout_request(update, context, payout_request_id, "ReturnToCompletedPayoutRequests")
+            return
+
+        with Database.get_session() as session:
+            data = CRUDPayoutRequest.get_by_status(session, PayoutRequestStatus.COMPLETED)
+
+            if "GoToPreviousCompletedPayoutRequests" in update.callback_query.data:
+                page_number = int(update.callback_query.data.split("*")[1])
+                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, page_number, 3)
+            elif "GoToNextCompletedPayoutRequests" in update.callback_query.data:
+                page_number = int(update.callback_query.data.split("*")[1])
+                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, page_number, 3)
+            else:
+                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, 1, 3)
+
+        await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=markup, parse_mode=ParseMode.HTML)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
+    async def rejected_payout_requests(update: Update, context: CallbackContext):
+        user_chat_id = update.effective_user.id
+        callback_data = "ShowThisRejectedPayoutRequest"
+        buttons_callback = ["GoToPreviousRejectedPayoutRequests", "GoToNextRejectedPayoutRequests", "ReturnTo2PayoutRequests"]
+        properties = [["id", "- شماره درخواست"], ["amount", "- مبلغ"], ["destination_type", "- مقصد واریز"]]
+
+        if callback_data in update.callback_query.data:
+            payout_request_id = int(update.callback_query.data.split("*")[1])
+            await RequestsMessage.__show_payout_request(update, context, payout_request_id, "ReturnToRejectedPayoutRequests")
+            return
+
+        with Database.get_session() as session:
+            data = CRUDPayoutRequest.get_by_status(session, PayoutRequestStatus.REJECTED)
+
+            if "GoToPreviousRejectedPayoutRequests" in update.callback_query.data:
+                page_number = int(update.callback_query.data.split("*")[1])
+                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, page_number, 3)
+            elif "GoToNextRejectedPayoutRequests" in update.callback_query.data:
+                page_number = int(update.callback_query.data.split("*")[1])
+                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, page_number, 3)
+            else:
+                markup, message_text = Pagination.paginate(data, callback_data, properties, buttons_callback, 12, 1, 3)
+
+        await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=markup, parse_mode=ParseMode.HTML)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
+    async def __show_payout_request(update: Update, context: CallbackContext, payout_request_id: int, return_callback_data: str):
+        user_chat_id = update.effective_user.id
+        with Database.get_session() as session:
+            request = CRUDPayoutRequest.get_by_id(session, payout_request_id)
+
+            message_text = "درخواست انتقال" + "\n\n"
+            message_text += "جزئیات درخواست : " + "\n" + "<blockquote>"
+            message_text += "- " + "شماره درخواست : " + f"{request.id}" + "\n\n"
+            message_text += "- " + "حساب کاربری درخواست دهنده : " + f"{request.account_id}" + "\n\n"
+            message_text += "- " + "نوع برداشت : " + f"{PayoutRequestTypeFarsi[request.type.name].value}" + "\n\n"  # NOQA
+            message_text += "- " + "مقصد واریز : " + f"{PayoutRequestDestinationTypeFarsi[request.destination_type.name].value}" + "\n\n"  # NOQA
+            if request.destination_type == PayoutRequestDestinationType.TRON:
+                message_text += "- " + "آدرس ولت : " + "\n" + f"<code>{request.wallet_address}</code>" + "\n\n"
+            elif request.destination_type == PayoutRequestDestinationType.SHABA:
+                bank_account = CRUDBankAccount.get_by_id(session, request.bank_id)
+                message_text += "- " + "شماره شبا : " + "\n" + f"<code>{bank_account.value}</code>" + "\n\n"
+            elif request.destination_type == PayoutRequestDestinationType.CARD:
+                bank_account = CRUDBankAccount.get_by_id(session, request.bank_id)
+                message_text += "- " + "شماره کارت : " + "\n" + f"<code>{bank_account.value}</code>" + "\n\n"
+
+            message_text += "- " + "مبلغ برداشت : " + NumberTools.format_number(request.amount) + " تومان"
+
+            message_text += "\n\n" + "- " + "وضعیت درخواست : " + f"{TransferRequestStatusFarsi[PayoutRequestStatus(request.status).name].value}" + "\n\n"
+            if request.status == PayoutRequestStatus.REJECTED:
+                message_text += "- " + "دلیل رد : " + f"{request.reason if request.reason else "ذکر نشده"}" + "\n\n"
+            elif request.status == PayoutRequestStatus.COMPLETED:
+                message_text += "- " + "تکمیل خودکار : " + ("بله" if request.auto_complete else "خیر") + "\n\n"
+                if request.transaction_url:
+                    message_text += "- " + "لینک تراکنش : " + f"{request.transaction_url}" + "\n\n"
+
+            shamsi_date = jdatetime.datetime.fromgregorian(datetime=request.created_at)
+            shamsi_date = shamsi_date.strftime('%Y/%m/%d ⏰ %H:%M')
+            shamsi_date = str(shamsi_date).replace("-", "/")
+            message_text += "- " + "تاریخ ثبت :" + shamsi_date + "\n\n"
+            message_text += "</blockquote>"
+
+            if request.status == PayoutRequestStatus.PENDING:
+                message_text += "✅ " + "در صورت واریز، بر روی تایید کلیک کنید."
+
+                if request.type == PayoutRequestType.TRON:
+                    message_text += "\n\n" + "🤖 " + "برای واریز خودکار به آدرس ولت توسط ربات، بر روی دکمه واریز خودکار کلیک کنید"
+                    markup = InlineKeyboardMarkup([
+                        [InlineKeyboardButton("❌ رد", callback_data=f"RejectThisPayoutRequest*{request.id}"), InlineKeyboardButton("✅ تایید", callback_data=f"CompleteThisPayoutRequest*{request.id}")],
+                        [InlineKeyboardButton("🤖 واریز خودکار", callback_data=f"AutoTronThisPayoutRequest*{request.id}")],
+                        [InlineKeyboardButton("🔙 بازگشت", callback_data=return_callback_data)],
+                    ])
+                else:
+                    markup = InlineKeyboardMarkup([
+                        [InlineKeyboardButton("❌ رد", callback_data=f"RejectThisPayoutRequest*{request.id}"), InlineKeyboardButton("✅ تایید", callback_data=f"CompleteThisPayoutRequest*{request.id}")],
+                        [InlineKeyboardButton("🔙 بازگشت", callback_data=return_callback_data)],
+                    ])
+
+                message_text += "\n\n" + "❌ " + "در صورت رد درخواست، بر روی رد کلیک کنید، همچنین میتوانید دلیل رد را هم بنویسید."
+            else:
+                markup = InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔙 بازگشت", callback_data=return_callback_data)],
+                ])
+
+        await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=markup, parse_mode=ParseMode.HTML,
+                                            disable_web_page_preview=True)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
+    async def change_payout_request_status(update: Update, context: CallbackContext):
+        user_chat_id = update.effective_user.id
+
+        if update.callback_query:
+            payout_request_id = int(update.callback_query.data.split("*")[1])
+            if "CompleteThisPayoutRequest" in update.callback_query.data:
+
+                with Database.get_session() as session:
+                    reqeust = CRUDPayoutRequest.get_by_id(session, payout_request_id)
+                    CRUDPayoutRequest.update_status(session, reqeust.id, PayoutRequestStatus.COMPLETED)
+
+                    CRUDAccount.update_balance(session, reqeust.account_id, UpdateType.DECREMENT, reqeust.amount)
+
+                    message_text = "✅ کاربر عزیز درخواست برداشت شما تایید شد و مبلغ واریز شد" + "\n"
+                    message_text += "مبلغ واریز : " + NumberTools.format_number(reqeust.amount) + " تومان"
+                    if reqeust.type == PayoutRequestType.TRON:
+                        message_text += "\n\n" + "مقصد واریز شده : " + reqeust.wallet_address
+                    else:
+                        bank_account = CRUDBankAccount.get_by_id(session, reqeust.bank_id)
+                        message_text += "\n\n" + "مقصد واریز شده : " + bank_account.value
+
+                    record = CRUDSession.get_by_account_id(session, reqeust.account_id)
+
+                    if record:
+                        source_chat_id = CRUDDownloaderUser.get_by_id(session, record[0].downloader_user_id).chat_id
+                        try:
+                            await context.bot.send_message(chat_id=source_chat_id, text=message_text, parse_mode=ParseMode.HTML)
+                        except:
+                            pass
+
+                    message_text = "✅ درخواست با شماره " + str(payout_request_id) + " با موفقیت تایید شد."
+                    message_text += "\n\n" + "- اعلان به کاربر ارسال شد"
+                    await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_pending_payout_requests)
+
+            elif "RejectThisPayoutRequest" in update.callback_query.data:
+
+                with Database.get_session() as session:
+                    CRUDDownloaderUser.update_state(session, str(user_chat_id), DownloaderState.ENTER_REASON_FOR_REJECT_PAYOUT)
+                    CRUDDownloaderUser.update_state_data(session, str(user_chat_id), str(payout_request_id))
+
+                message_text = "⭕️ دلیل رد کردن درخواست را وارد کنید" + "\n\n" + "(اختیاری)"
+
+                markup = InlineKeyboardMarkup([
+                    [InlineKeyboardButton("⏭️ رد کردن", callback_data=f"SkipReasonForRejectedPayoutRequest*{payout_request_id}")],
+                    [InlineKeyboardButton("🔙 بازگشت", callback_data=f"ReturnToShowPayoutRequest*{payout_request_id}")],
+                ])
+
+                await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=markup)
+
+            elif "SkipReasonForRejectedPayoutRequest" in update.callback_query.data:
+
+                with Database.get_session() as session:
+                    # Change Admin State
+                    CRUDDownloaderUser.update_state(session, str(user_chat_id), DownloaderState.START)
+
+                    request = CRUDPayoutRequest.get_by_id(session, payout_request_id)
+                    record = CRUDSession.get_by_account_id(session, request.account_id)
+                    if record:
+                        source_chat_id = CRUDDownloaderUser.get_by_id(session, record[0].downloader_user_id).chat_id
+                        CRUDPayoutRequest.update_status(session, payout_request_id, PayoutRequestStatus.REJECTED)
+
+                        message_text = "⭕️ " + "کاربر گرامی، متأسفانه درخواست برداشت شما رد شد."
+                        message_text += "\n\n" + "هیچ دلیلی برای این رد شدن از سوی مدیریت ثبت نشده است."
+                        try:
+                            msg = await context.bot.send_message(chat_id=source_chat_id, text=message_text, parse_mode=ParseMode.HTML, reply_markup=DownloaderInlineButtons.return_to_start)
+                            CRUDDownloaderUser.update_bot_last_message_id(session, source_chat_id, msg.id)
+                        except:
+                            pass
+
+                    message_text = "✅ درخواست با شماره " + str(payout_request_id) + " با موفقیت رد شد."
+                    message_text += "\n\n" + "- اعلان به کاربر درخواست دهنده ارسال شد"
+                    await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_pending_payout_requests)
+
+            elif "AutoTronThisPayoutRequest" in update.callback_query.data:
+                with Database.get_session() as session:
+                    try:
+                        main_wallet = CRUDSetting.get_transfer_wallet_public_key(session)
+                        main_wallet_prv = CRUDSetting.get_transfer_wallet_private_key(session)
+                        if not main_wallet:
+                            message_text = "❌ در تنظیمات ربات آدرس کیف پول ترون اتوماتیک خالی است"
+                            await update.callback_query.answer(message_text, show_alert=True)
+                            return
+
+                        reqeust = CRUDPayoutRequest.get_by_id(session, payout_request_id)
+                        request_amount_to_trx = await TronTools.convert_toman_to_trx(reqeust.amount)
+
+
+                        data = await TronTools.send_trx(main_wallet_prv, reqeust.wallet_address, request_amount_to_trx)
+
+
+                        tron_scan_url = TronTools.get_tronscan_url(data["txid"])
+
+                        CRUDPayoutRequest.update_status(session, reqeust.id, PayoutRequestStatus.COMPLETED)
+                        CRUDPayoutRequest.update_transaction_url(session, reqeust.id, tron_scan_url)
+                        CRUDPayoutRequest.update_auto_complete(session, reqeust.id, True)
+
+                        CRUDAccount.update_balance(session, reqeust.account_id, UpdateType.DECREMENT, reqeust.amount)
+
+                        message_text = "✅ کاربر عزیز درخواست برداشت شما تایید شد و مبلغ واریز شد" + "\n"
+                        message_text += "مبلغ واریز : " + NumberTools.format_number(reqeust.amount) + " تومان"
+                        message_text += "\n\n" + "مقصد واریز شده : " + reqeust.wallet_address
+
+                        record = CRUDSession.get_by_account_id(session, reqeust.account_id)
+
+                        if record:
+                            source_chat_id = CRUDDownloaderUser.get_by_id(session, record[0].downloader_user_id).chat_id
+                            try:
+                                await context.bot.send_message(chat_id=source_chat_id, text=message_text, parse_mode=ParseMode.HTML)
+                            except:
+                                pass
+
+                        message_text = "✅ درخواست با شماره " + str(payout_request_id) + " با موفقیت تایید شد."
+                        message_text += "\n\n" + "- لینک تراکنش : " + tron_scan_url
+                        message_text += "\n\n" + "- اعلان به کاربر ارسال شد"
+                        await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text,
+                                                            reply_markup=DownloaderInlineButtons.return_to_pending_payout_requests, disable_web_page_preview=True)
+                    except Exception as e:
+                        message_text = "❌ خطایی رخ داد" + "\n\n" + f"Error : {e}"
+                        await update.callback_query.answer(message_text, show_alert=True)
+                        return
+
+        elif update.effective_message.text:
+            reason = update.effective_message.text
+            with Database.get_session() as session:
+                # Change Admin State
+                CRUDDownloaderUser.update_state(session, str(user_chat_id), DownloaderState.START)
+
+                payout_request_id = int(CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id)).state_data)
+                request = CRUDPayoutRequest.get_by_id(session, payout_request_id)
+                record = CRUDSession.get_by_account_id(session, request.account_id)
+                if record:
+                    source_chat_id = CRUDDownloaderUser.get_by_id(session, record[0].downloader_user_id).chat_id
+                    CRUDPayoutRequest.update_status(session, payout_request_id, PayoutRequestStatus.REJECTED)
+                    CRUDPayoutRequest.update_reason(session, payout_request_id, reason)
+
+                    message_text = "⭕️ " + "کاربر گرامی، متأسفانه درخواست برداشت شما رد شد."
+                    message_text += "\n\n" + "دلیل رد شدن درخواست : "
+                    message_text += "\n" + "<blockquote>" + reason + "</blockquote>"
+
+                    try:
+                        msg = await context.bot.send_message(chat_id=source_chat_id, text=message_text, parse_mode=ParseMode.HTML, reply_markup=DownloaderInlineButtons.return_to_start)
+                        CRUDDownloaderUser.update_bot_last_message_id(session, source_chat_id, msg.id)
+                    except:
+                        pass
+
+                message_text = "✅ درخواست با شماره " + str(payout_request_id) + " با موفقیت رد شد."
+                message_text += "\n\n" + "- اعلان به کاربر درخواست دهنده ارسال شد"
+                msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_pending_payout_requests)
+                CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
     async def return_to_requests(update: Update, context: CallbackContext):
         await RequestsMessage.requests(update, context, returned=True)
 
@@ -578,6 +890,13 @@ class RequestsMessage:
 
     @staticmethod
     @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
+    async def return_to_show_payout_request(update: Update, context: CallbackContext):
+        payout_request_id = int(update.callback_query.data.split("*")[1])
+        return_callback = "ReturnToPendingPayoutRequests"
+        await RequestsMessage.__show_payout_request(update, context, payout_request_id, return_callback)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
     async def return_to_register_requests(update: Update, context: CallbackContext):
         await RequestsMessage.register_requests(update, context)
 
@@ -585,6 +904,11 @@ class RequestsMessage:
     @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
     async def return_to_transfer_requests(update: Update, context: CallbackContext):
         await RequestsMessage.transfer_requests(update, context)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
+    async def return_to_payout_requests(update: Update, context: CallbackContext):
+        await RequestsMessage.payout_requests(update, context)
 
     @staticmethod
     @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
@@ -600,3 +924,18 @@ class RequestsMessage:
     @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
     async def return_to_rejected_transfer_requests(update: Update, context: CallbackContext):
         await RequestsMessage.rejected_transfer_requests(update, context)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
+    async def return_to_pending_payout_requests(update: Update, context: CallbackContext):
+        await RequestsMessage.pending_payout_requests(update, context)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
+    async def return_to_completed_payout_requests(update: Update, context: CallbackContext):
+        await RequestsMessage.completed_payout_requests(update, context)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
+    async def return_to_rejected_payout_requests(update: Update, context: CallbackContext):
+        await RequestsMessage.rejected_payout_requests(update, context)

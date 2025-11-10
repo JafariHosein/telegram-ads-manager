@@ -26,7 +26,7 @@ class ContactSupportMessage:
                 message_text += "👥 " + "آیدی پشتیبان تبلیغات : " + data.advertising_support
 
             if not data.advertising_support and not data.financial_support:
-                message_text += "⭕️ این بخش در حال بروز رسانی است."
+                message_text += "⭕️ این بخش در حال بروزرسانی است."
 
             msg = await context.bot.send_message(chat_id=update.effective_chat.id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_start)
             CRUDDownloaderUser.update_bot_last_message_id(session, str(update.effective_chat.id), msg.id)

@@ -5,7 +5,7 @@ from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 import jdatetime
 
 from bot.keyboard import DownloaderInlineButtons
-from database import Database, CRUDLink, CRUDAd, CRUDSession, CRUDAccount, CRUDDownloaderUser
+from database import Database, CRUDLink, CRUDAd, CRUDSession, CRUDAccount, CRUDDownloaderUser, PayoutRequestDestinationTypeFarsi
 from utils.num_tools import NumberTools
 
 
@@ -13,7 +13,7 @@ class Pagination:
 
     @staticmethod
     def paginate(data: Sequence, callback_data: str, properties: list, buttons_callback: list, show_number: int = 20, page: int = 1, count: int = 2, one_page_only: bool = False, end_text: str = "",
-                 callback_number_name: str = "") -> List:
+                 callback_number_name: str = "", no_callback: bool = False) -> List:
         """
         example properties = [["username","یوزرنیم"],["password","رمز عبور"],...]
         example buttons_callback = [PreviousPage, NextPage, Return]
@@ -50,6 +50,9 @@ class Pagination:
                     prop_value = getattr(data[item + number], my_property[0], None)
                     message_text += my_property[1] + " : " + f"{Pagination.__format_value(prop_name, prop_value)}" + "\n"
                 message_text += "</blockquote>" + "\n"
+
+                if no_callback:
+                    continue
 
                 if callback_number_name:
                     item_id_2 = getattr(data[item + number], callback_number_name, None)
@@ -230,6 +233,8 @@ class Pagination:
             return NumberTools.format_number(property_value) + " تومان"
         elif property_name == "capacity":
             return NumberTools.format_number(property_value) + " نفر"
+        elif property_name == "destination_type":
+            return PayoutRequestDestinationTypeFarsi[property_value.name].value
         elif property_name == "count_minus":
             count = 0
             with Database.get_session() as session:

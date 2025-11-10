@@ -1,3 +1,5 @@
+import datetime
+
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
@@ -93,6 +95,16 @@ class CRUDSetting:
         return db.execute(statement).scalars().all()[0].main_channel_chat_id
 
     @staticmethod
+    def get_trx_price(db: Session) -> int:
+        statement = select(Setting)
+        return db.execute(statement).scalars().all()[0].trx_price
+
+    @staticmethod
+    def get_last_trx_price_update(db: Session) -> datetime.datetime:
+        statement = select(Setting)
+        return db.execute(statement).scalars().all()[0].last_trx_price_update
+
+    @staticmethod
     def update_main_wallet_address(db: Session, new_main_wallet_address: str):
         record = db.scalars(select(Setting)).first()
         record.main_wallet_address = new_main_wallet_address
@@ -168,4 +180,16 @@ class CRUDSetting:
     def update_main_channel_chat_id(db: Session, new_main_channel_chat_id: str):
         record = db.scalars(select(Setting)).first()
         record.main_channel_chat_id = new_main_channel_chat_id
+        db.commit()
+
+    @staticmethod
+    def update_trx_price(db: Session, new_trx_price: int):
+        record = db.scalars(select(Setting)).first()
+        record.trx_price = new_trx_price
+        db.commit()
+
+    @staticmethod
+    def update_last_trx_price_update(db: Session, new_last_trx_price_update: datetime.datetime):
+        record = db.scalars(select(Setting)).first()
+        record.last_trx_price_update = new_last_trx_price_update
         db.commit()

@@ -66,7 +66,29 @@ class DownloaderInlineButtons:
         "WithAccountID": "🏷️ شماره اکانت",
         "WithUsername": "🔢 آیدی عددی",
         "Shaba": "شبا",
-        "Card": "شماره کارت"
+        "Card": "شماره کارت",
+        "Tron": "🪙 ترون",
+        "Rial": "💰 ریال",
+        "TransferWalletBalance": "💰 موجودی ولت اتوماتیک",
+        "ForceJoin": "📌 عضویت اجباری",
+        "FinancialSupport": "💰 آیدی پشتببانی مالی",
+        "AdvertisingSupport": "📢 آیدی پشتیبانی تبلیغات",
+        "MinimumPayout": "💴 حداقل برداشت",
+        "IsAutoTransfer": "🔁 تایید انتقال خودکار",
+        "LogChannelChatId": "⚙️ کانال لاگ",
+        "MainChannelChatId": "📡 کانال اصلی",
+        "TransferWalletPrivateKey": "🔑 کلید ولت انتقال خودکار",
+        "TransferWalletPublicKey": "📥 آدرس ولت انتقال خودکار",
+        "ChangeStatus": "🔰 تغییر وضعیت",
+        "SendMessageToAccount": "🚩 ارسال پیام به کاربر",
+        "Balance": "💰 موجودی",
+        "Role": "👤 نقش",
+        "Status": "⚙️ وضعیت",
+        "Ban": "🚫 بن",
+        "Admin": "👑 ادمین",
+        "Downloader": "📥 دانلودر",
+        "GlobalMessage": "📢 پیام همگانی",
+        "BlockList": "🚫 بلک لیست"
     }
 
     register_empty = InlineKeyboardMarkup([
@@ -97,6 +119,10 @@ class DownloaderInlineButtons:
         [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToPendingTransferRequests")]
     ])
 
+    return_to_pending_payout_requests = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToPendingPayoutRequests")]
+    ])
+
     requests = InlineKeyboardMarkup([
         [InlineKeyboardButton(f"{words['Registers']}", callback_data="RegistersMenu"),
          InlineKeyboardButton(f"{words['Transfers']}", callback_data="TransfersMenu")],
@@ -115,6 +141,13 @@ class DownloaderInlineButtons:
         [InlineKeyboardButton(f"{TransferRequestStatusFarsi.PENDING.value}", callback_data="PendingTransferRequests")],
         [InlineKeyboardButton(f"{TransferRequestStatusFarsi.COMPLETED.value}", callback_data="CompletedTransferRequests")],
         [InlineKeyboardButton(f"{TransferRequestStatusFarsi.REJECTED.value}", callback_data="RejectedTransferRequests")],
+        [InlineKeyboardButton(f"{words['Return']}", callback_data="ReturnToRequests")],
+    ])
+
+    payout_requests = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{TransferRequestStatusFarsi.PENDING.value}", callback_data="PendingPayoutRequests")],
+        [InlineKeyboardButton(f"{TransferRequestStatusFarsi.COMPLETED.value}", callback_data="CompletedPayoutRequests")],
+        [InlineKeyboardButton(f"{TransferRequestStatusFarsi.REJECTED.value}", callback_data="RejectedPayoutRequests")],
         [InlineKeyboardButton(f"{words['Return']}", callback_data="ReturnToRequests")],
     ])
 
@@ -280,14 +313,155 @@ class DownloaderInlineButtons:
     ])
 
     my_bank_account_type = InlineKeyboardMarkup([
-        [InlineKeyboardButton(f"{words["Shaba"]}", callback_data="AddShabaBankAccount")],
-        [InlineKeyboardButton(f"{words["Card"]}", callback_data="AddCardBankAccount")],
+        [InlineKeyboardButton(f"{words["Shaba"]}", callback_data="AddShabaBankAccount"),
+         InlineKeyboardButton(f"{words["Card"]}", callback_data="AddCardBankAccount")],
         [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToBankAccount")]
     ])
 
     return_to_bank_account = InlineKeyboardMarkup([
         [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToBankAccount")]
     ])
+
+    choose_payout_type = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["Tron"]}", callback_data="PayoutWithTron")],
+        [InlineKeyboardButton(f"{words["Rial"]}", callback_data="PayoutWithRial")],
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToStart")]
+    ])
+
+    return_to_payout = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToPayout")]
+    ])
+
+    submit_payout_request = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["Submit"]}", callback_data="SubmitPayoutRequest")],
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToPayout")]
+    ])
+
+    setting_menu = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["Edit"]}", callback_data="EditSettings")],
+        [InlineKeyboardButton(f"{words["TransferWalletBalance"]}", callback_data="ViewTransferWalletBalance"),
+         InlineKeyboardButton(f"{words["ForceJoin"]}", callback_data="ForceJoin")],
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToStart")]
+    ])
+
+    edit_setting_menu = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["FinancialSupport"]}", callback_data="EditThisSetting*FinancialSupport"),
+         InlineKeyboardButton(f"{words["AdvertisingSupport"]}", callback_data="EditThisSetting*AdvertisingSupport")],
+        [InlineKeyboardButton(f"{words["MinimumPayout"]}", callback_data="EditThisSetting*MinimumPayout"),
+         InlineKeyboardButton(f"{words["IsAutoTransfer"]}", callback_data="EditThisSetting*IsAutoTransfer")],
+        [InlineKeyboardButton(f"{words["LogChannelChatId"]}", callback_data="EditThisSetting*LogChannelChatId"),
+         InlineKeyboardButton(f"{words["MainChannelChatId"]}", callback_data="EditThisSetting*MainChannelChatId")],
+        [InlineKeyboardButton(f"{words["TransferWalletPrivateKey"]}", callback_data="EditThisSetting*TransferWalletPrivateKey"),
+         InlineKeyboardButton(f"{words["TransferWalletPublicKey"]}", callback_data="EditThisSetting*TransferWalletPublicKey")],
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToSettings")]
+    ])
+
+    edit_is_auto_transfer_to_enable = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["Enable"]}", callback_data="EnableIsAutoTransfer")],
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToSettings")]
+    ])
+    edit_is_auto_transfer_to_disable = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["Disable"]}", callback_data="DisableIsAutoTransfer")],
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToSettings")]
+    ])
+
+    return_to_settings = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToSettings")]
+    ])
+
+    force_join_empty = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["Add"]}", callback_data="AddForceJoinChannel")],
+        [InlineKeyboardButton(f"{words["ChangeStatus"]}", callback_data="ChangeStatusForceJoinChannel")],
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToSettings")]
+    ])
+    force_join = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["Add"]}", callback_data="AddForceJoinChannel"),
+         InlineKeyboardButton(f"{words["Delete"]}", callback_data="RemoveForceJoinChannel")],
+        [InlineKeyboardButton(f"{words["ChangeStatus"]}", callback_data="ChangeStatusForceJoinChannel")],
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToSettings")]
+    ])
+
+    return_to_force_join = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ForceJoin")]
+    ])
+
+    account_menu = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["Edit"]}", callback_data="EditThisAccount"),
+         InlineKeyboardButton(f"{words["ChangePassword"]}", callback_data="ChangeThisAccountPassword")],
+        [InlineKeyboardButton(f"{words["SendMessageToAccount"]}", callback_data="SendMessageToThisAccount"),
+         InlineKeyboardButton(f"{words["MyLinks"]}", callback_data="ViewLinksForThisAccount")],
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToAccounts")]
+    ])
+
+    account_menu_password_changed = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["Yes"]}", callback_data="SendNewPasswordToUser")],
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToSearchedAccount")]
+    ])
+
+    return_to_account_searched = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToSearchedAccount")]
+    ])
+
+    send_to_user = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["Yes"]}", callback_data="SendToThisAccount")],
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToSearchedAccount")]
+    ])
+
+    edit_account_menu = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["Balance"]}", callback_data="EditThisAccountBalance"),
+         InlineKeyboardButton(f"{words["Role"]}", callback_data="EditThisAccountRole")],
+        [InlineKeyboardButton(f"{words["Status"]}", callback_data="EditThisAccountStatus")],
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToSearchedAccount")]
+    ])
+
+    edit_account_status = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["Enable"]}", callback_data="ActiveThisAccount"),
+         InlineKeyboardButton(f"{words["Ban"]}", callback_data="BanThisAccount")],
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToSearchedAccount")]
+    ])
+
+    edit_account_role = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["Admin"]}", callback_data="AdminThisAccount"),
+         InlineKeyboardButton(f"{words["Downloader"]}", callback_data="DownloaderThisAccount")],
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToSearchedAccount")]
+    ])
+
+    users_menu = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["GlobalMessage"]}", callback_data="GlobalMessage"),
+         InlineKeyboardButton(f"{words["SendMessageToAccount"]}", callback_data="SendMessageToUser")],
+        [InlineKeyboardButton(f"{words["BlockList"]}", callback_data="BlockList")],
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToStart")]
+    ])
+
+    return_to_users = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToUsers")]
+    ])
+
+    users_global_message = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["Yes"]}", callback_data="SendThisGlblMessage")],
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToUsers")]
+    ])
+
+    user_private_message = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["Yes"]}", callback_data="SendThisPrivateMessage")],
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToUsers")]
+    ])
+
+    block_list_empty = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["Add"]}", callback_data="AddUserToBlockList")],
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToUsers")]
+    ])
+
+    block_list = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["Add"]}", callback_data="AddUserToBlockList"),
+         InlineKeyboardButton(f"{words["Delete"]}", callback_data="RemoveUserToBlockList")],
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToUsers")]
+    ])
+
+    return_block_list = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["Return"]}", callback_data="BlockList")]
+    ])
+
 
     @staticmethod
     def return_to_view_link_menu(link_id: int):

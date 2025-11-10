@@ -48,6 +48,7 @@ class DownloaderState(str, enum.Enum):
     # Admin
     ENTER_REASON_FOR_REJECT = "enter reason for reject"
     ENTER_REASON_FOR_REJECT_TRANSFER = "enter reason for reject transfer"
+    ENTER_REASON_FOR_REJECT_PAYOUT = "enter reason for reject payout"
 
     # New Username
     ENTER_NEW_USERNAME = "enter new username"
@@ -60,6 +61,31 @@ class DownloaderState(str, enum.Enum):
     ENTER_ACCOUNT_USERNAME = "enter account username"
     ENTER_TRANSFER_VALUE = "enter transfer value"
 
+    # Payout
+    ENTER_PAYOUT_VALUE = "enter payout value"
+    ENTER_WALLET_ADDRESS = "enter wallet address"
+
     # Bank Account
     ENTER_SHABA = "enter shaba"
     ENTER_CARD = "enter card"
+
+    # Setting
+    EDIT_FINANCIAL_SUPPORT = "edit financial support"
+    EDIT_ADVERTISING_SUPPORT = "edit advertising support"
+    EDIT_MINIMUM_PAYOUT = "edit minimum payout"
+    EDIT_LOG_CHANNEL_CHAT_ID = "edit log channel chat id"
+    EDIT_MAIN_CHANNEL_CHAT_ID = "edit main channel chat id"
+    EDIT_TRANSFER_WALLET_PRIVATE_KEY = "edit transfer wallet private key"
+    EDIT_TRANSFER_WALLET_PUBLIC_KEY = "edit transfer wallet public key"
+    ENTER_FORCE_JOIN_USERNAME = "enter force join username"
+
+    # Accounts
+    ENTER_ACCOUNT_SEARCH_TEXT = "enter account search text"
+    ENTER_YOUR_MESSAGE_FOR_USER = "enter your message form user"
+    ENTER_NEW_BALANCE = "enter new balance"
+
+    # Users
+    ENTER_GLOBAL_MESSAGE = "enter global message"
+    ENTER_BLOCK_LIST = "enter block list"
+    ENTER_USER_CHAT_ID = "enter user chat id"
+    ENTER_YOUR_MESSAGE_FOR_PRIVATE = "enter your message form private"

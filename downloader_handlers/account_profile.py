@@ -1,10 +1,12 @@
+from datetime import datetime
+
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode
 from telegram.ext import CallbackContext, ApplicationHandlerStop
 import jdatetime
 
 from bot.keyboard import DownloaderInlineButtons, DownloaderReplyButtons
-from database import DownloaderDecorator, Database, CRUDDownloaderUser, CRUDSession, CRUDAccount, CRUDLink, CRUDAd, AdLinkTypeFarsi, AdStatus, Account, CRUDBankAccount, BankAccountTypeFarsi, BankAccountType
+from database import DownloaderDecorator, Database, CRUDDownloaderUser, CRUDSession, CRUDAccount, CRUDLink, CRUDAd, AdLinkTypeFarsi, AdStatus, Account, CRUDBankAccount, BankAccountTypeFarsi, BankAccountType, CRUDPayoutRequest, CRUDTransferRequest, PayoutRequestStatus, TransferRequestStatus, TransferRequest, TransferRequestStatusFarsi, PayoutRequestDestinationType
 from utils import DownloaderState, NumberTools, Password, Pagination, Regex
 
 
@@ -460,10 +462,69 @@ class AccountProfileMessage:
             bank_account_id = int(data.split("*")[1])
 
             with Database.get_session() as session:
+                record = CRUDPayoutRequest.get_by_bank_id(session, bank_account_id)
+
+                if record:
+                    await update.callback_query.answer("❌ حذف حساب بانکی‌ای که در درخواست‌های برداشت استفاده شده است، امکان‌پذیر نیست.", show_alert=True)
+                    return
+
                 CRUDBankAccount.delete(session, bank_account_id)
 
                 await update.callback_query.answer("✅ حذف شد", show_alert=True)
                 await AccountProfileMessage.my_bank_account(update, context)
+
+    @staticmethod
+    @DownloaderDecorator.callback(login_require=True)
+    async def my_history(update: Update, context: CallbackContext):
+        user_chat_id = update.effective_user.id
+
+        with Database.get_session() as session:
+            user = CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id))
+            account_session = CRUDSession.get_by_downloader_user_id(session, user.id)[0]
+            my_account = CRUDAccount.get_by_id(session, account_session.account_id)
+
+            payout_requests = CRUDPayoutRequest.get_by_account_id(session, my_account.id)
+            transfer_requests = CRUDTransferRequest.get_by_account_id(session, my_account.id)
+
+            message_text = "در این بخش می‌توانید پنج درخواست اخیر خود را مشاهده کنید." + "\n\n"
+
+            if not payout_requests and not transfer_requests:
+                message_text += "❌ تاکنون هیچ درخواستی ثبت نکرده‌اید."
+                await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_account_profile)
+                return
+
+            now = datetime.now()
+
+            combined = list(payout_requests) + list(transfer_requests)
+
+            sorted_items = sorted(combined, key=lambda x: abs((now - x.created_at).total_seconds()))
+
+            for item in sorted_items:
+                if isinstance(item, TransferRequest):
+                    message_text += "<blockquote>"
+                    message_text += "- نوع درخواست : انتقال" + "\n\n"
+                    message_text += "- حساب کاربری مقصد : " + str(item.target_account_id) + "\n"
+                    message_text += "- مبلغ : " + NumberTools.format_number(item.amount) + " تومان" + "\n"
+                    message_text += "- وضعیت : " + TransferRequestStatusFarsi[item.status.name].value + "\n"
+                    if item.status == TransferRequestStatus.REJECTED and item.reason:
+                        message_text += "- دلیل رد : " + item.reason
+                    message_text += "</blockquote>"
+                else:
+                    message_text += "<blockquote>"
+                    message_text += "- نوع درخواست : برداشت" + "\n\n"
+                    if item.destination_type == PayoutRequestDestinationType.TRON:
+                        message_text += "- واریز به : " + item.wallet_address + "\n"
+                    else:
+                        bank_account = CRUDBankAccount.get_by_id(session,item.bank_id)
+                        message_text += "- واریز به : " + bank_account.value + "\n"
+                    message_text += "- مبلغ : " + NumberTools.format_number(item.amount) + " تومان" + "\n"
+                    message_text += "- وضعیت : " + TransferRequestStatusFarsi[item.status.name].value + "\n"
+                    if item.status == TransferRequestStatus.REJECTED and item.reason:
+                        message_text += "- دلیل رد : " + item.reason
+                    message_text += "</blockquote>" + "\n\n"
+
+            await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text,reply_markup=DownloaderInlineButtons.return_to_account_profile,
+                                                parse_mode=ParseMode.HTML)
 
     @staticmethod
     @DownloaderDecorator.callback(login_require=True)

@@ -24,6 +24,17 @@ class PayoutRequestStatus(enum.Enum):
     REJECTED = "rejected"
 
 
+class PayoutRequestTypeFarsi(enum.Enum):
+    RIAL = "💰 ریال"
+    TRON = "💎 ترون"
+
+
+class PayoutRequestDestinationTypeFarsi(enum.Enum):
+    CARD = "💳 شماره کارت"
+    SHABA = "🏦 شماره شبا"
+    TRON = "🧾 آدرس ولت"
+
+
 class PayoutRequest(Base):
     __tablename__ = "payout_requests"
 
@@ -37,6 +48,7 @@ class PayoutRequest(Base):
     status: Mapped[PayoutRequestStatus] = mapped_column(Enum(PayoutRequestStatus), nullable=False, default=PayoutRequestStatus.PENDING)
     reason: Mapped[str] = mapped_column(String, nullable=True)
     auto_complete: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    transaction_url: Mapped[str] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False, onupdate=datetime.now)
 

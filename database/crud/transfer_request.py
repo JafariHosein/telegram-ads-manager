@@ -1,7 +1,7 @@
 from typing import Sequence
 
 from sqlalchemy.orm import Session
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, select, update, desc
 
 from database.models.transfer_request import TransferRequest, TransferRequestStatus
 
@@ -31,7 +31,7 @@ class CRUDTransferRequest:
         if status:
             statement = select(TransferRequest).where(TransferRequest.account_id == account_id,TransferRequest.status == status)
         else:
-            statement = select(TransferRequest).where(TransferRequest.account_id == account_id)
+            statement = select(TransferRequest).where(TransferRequest.account_id == account_id).order_by(TransferRequest.created_at.desc())
         return db.execute(statement).scalars().all()
 
     @staticmethod

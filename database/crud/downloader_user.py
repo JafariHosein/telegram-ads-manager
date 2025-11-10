@@ -28,6 +28,11 @@ class CRUDDownloaderUser:
         return db.execute(statement).scalars().all()
 
     @staticmethod
+    def get_block_list(db: Session) -> Sequence[DownloaderUser]:
+        statement = select(DownloaderUser).where(DownloaderUser.can_use_bot == False)
+        return db.execute(statement).scalars().all()
+
+    @staticmethod
     def get_by_id(db: Session, id: int) -> DownloaderUser | None:
         statement = select(DownloaderUser).where(DownloaderUser.id == id)
         return db.execute(statement).scalars().first()

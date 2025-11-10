@@ -12,10 +12,17 @@ class AccountRole(enum.Enum):
     ADMIN = "admin"
     DOWNLOADER = "downloader"
 
+class AccountRoleFarsi(enum.Enum):
+    ADMIN = "👑 ادمین"
+    DOWNLOADER = "📥 دانلودر"
 
 class AccountStatus(enum.Enum):
     BANNED = "banned"
     ACTIVE = "active"
+
+class AccountStatusFarsi(enum.Enum):
+    BANNED = "🚫 بن"
+    ACTIVE = "✅ فعال"
 
 
 class Account(Base):

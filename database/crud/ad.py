@@ -29,6 +29,9 @@ class CRUDAd:
         db.commit()
         db.refresh(new_ad)
 
+        from utils.logger import Logger
+        Logger.notice("تبلیغ شماره " + f"{new_ad.id} ساخته شد")
+
         return new_ad.id
 
     @staticmethod

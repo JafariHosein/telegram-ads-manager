@@ -15,6 +15,7 @@ class CRUDPayoutRequest:
         db.add(PayoutRequest(account_id=account_id, type=type, destination_type=destination,
                              amount=amount, status=status, wallet_address=wallet_address, auto_complete=auto_complete,
                              bank_id=bank_id, reason=reason))
+
         db.commit()
 
     @staticmethod
@@ -38,7 +39,7 @@ class CRUDPayoutRequest:
         if status:
             statement = select(PayoutRequest).where(PayoutRequest.account_id == account_id, PayoutRequest.status == status)
         else:
-            statement = select(PayoutRequest).where(PayoutRequest.account_id == account_id)
+            statement = select(PayoutRequest).where(PayoutRequest.account_id == account_id).order_by(PayoutRequest.created_at.desc())
         return db.execute(statement).scalars().all()
 
     @staticmethod
@@ -65,5 +66,17 @@ class CRUDPayoutRequest:
     @staticmethod
     def update_reason(db: Session, id: int, new_reason: str):
         statement = update(PayoutRequest).where(PayoutRequest.id == id).values(reason=new_reason)
+        db.execute(statement)
+        db.commit()
+
+    @staticmethod
+    def update_auto_complete(db: Session, id: int, auto_complete: bool):
+        statement = update(PayoutRequest).where(PayoutRequest.id == id).values(auto_complete=auto_complete)
+        db.execute(statement)
+        db.commit()
+
+    @staticmethod
+    def update_transaction_url(db: Session, id: int, transaction_url: str):
+        statement = update(PayoutRequest).where(PayoutRequest.id == id).values(transaction_url=transaction_url)
         db.execute(statement)
         db.commit()

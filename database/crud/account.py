@@ -9,6 +9,7 @@ from database.models.account import Account, AccountRole, AccountStatus
 from database.crud.manager import UpdateType
 
 
+
 class CRUDAccount:
 
     @staticmethod
@@ -27,6 +28,9 @@ class CRUDAccount:
         db.add(new_account)
         db.commit()
         db.refresh(new_account)
+
+        from utils.logger import Logger
+        Logger.notice("اکانت شماره " + f"{new_account.id} ساخته شد" + "\n\n" + "توسط " + username)
 
         return new_account.id
 
@@ -82,6 +86,12 @@ class CRUDAccount:
     @staticmethod
     def update_status(db: Session, id: int, new_status: AccountStatus):
         statement = update(Account).where(Account.id == id).values(status=new_status)
+        db.execute(statement)
+        db.commit()
+
+    @staticmethod
+    def update_role(db: Session, id: int, new_role: AccountRole):
+        statement = update(Account).where(Account.id == id).values(role=new_role)
         db.execute(statement)
         db.commit()
 

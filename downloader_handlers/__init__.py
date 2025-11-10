@@ -10,3 +10,9 @@ from .chat_member import ChatMember
 from .account_profile import AccountProfileMessage
 from .manage_links import ManageLinksMessage
 from .transfer import TransferMessage
+from .payout import PayoutMessage
+from .online_price import OnlinePriceMessage
+from .settings import SettingsMessage
+from .accounts import AccountsMessage
+from .users import UsersMessage
+from .statistics import StatisticsMessage

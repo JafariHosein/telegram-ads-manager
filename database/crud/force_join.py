@@ -28,3 +28,8 @@ class CRUDForceJoin:
     def get_by_id(db: Session, id: int) -> ForceJoin | None:
         statement = select(ForceJoin).where(ForceJoin.id == id)
         return db.execute(statement).scalars().first()
+
+    @staticmethod
+    def exists(db: Session, username: str) -> bool:
+        statement = select(ForceJoin).where(ForceJoin.username == username)
+        return bool(db.execute(statement).scalars().first())

@@ -39,6 +39,17 @@ class Regex:
         s = card.strip()
         return bool(pattern_plain.fullmatch(s) or pattern_spaced.fullmatch(s))
 
+    @staticmethod
+    def is_trx_address(address: str) -> bool:
+        address = address.strip()
+        pattern = r'^T[1-9A-HJ-NP-Za-km-z]{33}$'
+        return bool(re.match(pattern, address))
+
+    @staticmethod
+    def is_valid_trx_private_key(s: str) -> bool:
+        regex = re.compile(r'^(?:0x)?[0-9a-fA-F]{64}$')
+        return bool(regex.match(s))
+
 class Password:
 
     @staticmethod

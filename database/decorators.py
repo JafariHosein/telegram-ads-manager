@@ -151,7 +151,7 @@ class DownloaderDecorator:
             for chat in chats:
                 try:
                     channel = await context.bot.get_chat(chat_id=chat.chat_id)
-                    buttons.append([InlineKeyboardButton(channel.title, url=f"https://t.me/{chat.username}")])
+                    buttons.append([InlineKeyboardButton(channel.title, url=f"https://t.me/{chat.username.replace("@", "")}")])
                 except:
                     continue
 
