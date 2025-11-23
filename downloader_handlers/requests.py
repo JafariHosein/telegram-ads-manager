@@ -205,7 +205,7 @@ class RequestsMessage:
             await update.callback_query.answer("✅ ارسال شد")
 
     @staticmethod
-    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN, check_last=False)
     async def change_register_request_status(update: Update, context: CallbackContext):
         user_chat_id = update.effective_user.id
 
@@ -245,7 +245,7 @@ class RequestsMessage:
                     message_text += "\n\n" + "🚀 هم‌اکنون به‌صورت خودکار وارد حساب خود شده‌اید و نیازی به انجام هیچ کاری نیست."
 
                     try:
-                        msg = await context.bot.send_message(chat_id=user.chat_id, text=message_text, parse_mode=ParseMode.HTML)
+                        msg = await context.bot.send_message(chat_id=user.chat_id, text=message_text, parse_mode=ParseMode.HTML, reply_markup=DownloaderReplyButtons.downloader)
                         CRUDDownloaderUser.update_bot_last_message_id(session, user.chat_id, msg.id)
                     except:
                         pass
@@ -946,5 +946,3 @@ class RequestsMessage:
     @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
     async def return_to_requests(update: Update, context: CallbackContext):
         await RequestsMessage.requests(update, context, returned=True)
-
-
