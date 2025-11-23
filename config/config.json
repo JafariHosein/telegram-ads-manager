@@ -1,9 +1,9 @@
 {
   "downloader_bot": {
-    "bot_token": "8021389163:AAEePHNyaEfvznfT8oj8Uyn1rPKGnJ-0rzw"
+    "bot_token": "8216006224:AAEpjwUvoHMYmTYJ2lms3NtCInE038kMDMY"
   },
   "customer_bot": {
-    "bot_token": "8216006224:AAEpjwUvoHMYmTYJ2lms3NtCInE038kMDMY"
+    "bot_token": "8234215861:AAH_eF-Gwjp1XQLEZvMxJWQMGzULneURQzQ"
   },
   "database": {
     "host": "localhost",
@@ -12,5 +12,5 @@
     "username": "postgres",
     "password": "root123"
   },
-  "owner_chat_id": 7485313137
+  "owner_chat_id": 7219554269
 }

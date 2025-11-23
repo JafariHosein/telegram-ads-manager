@@ -1,9 +1,10 @@
+import jdatetime
 from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import CallbackContext, ApplicationHandlerStop
 
 from bot.keyboard import DownloaderReplyButtons, DownloaderInlineButtons
-from database import CRUDDownloaderUser, Database, CRUDSession, CRUDAccount, AccountRole, DownloaderDecorator, CRUDAd, AdStatus
+from database import CRUDDownloaderUser, Database, CRUDSession, CRUDAccount, AccountRole, DownloaderDecorator, CRUDAd, AdStatus, CRUDLink
 from utils import DownloaderState, Password
 from config import Config
 from downloader_handlers.active_ads import ActiveAdsMessage
@@ -15,7 +16,7 @@ class StartCommand:
     async def start(update: Update, context: CallbackContext, returned: bool = False) -> None:
         user_chat_id = update.effective_user.id
 
-        is_new = StartCommand.check_user_is_new(str(user_chat_id))
+        is_new = StartCommand.check_user_is_new(str(user_chat_id), username=update.effective_user.username)
 
         with Database.get_session() as session:
             # Clear State & StateData
@@ -41,8 +42,13 @@ class StartCommand:
                         ad = CRUDAd.get_by_id(ssn, ad_id)
                         if ad.status != AdStatus.ACTIVE:
                             raise Exception()
-                        CRUDDownloaderUser.update_state_data(ssn, str(user_chat_id), f"{ad.category_title};{ad_id}")
-                        await ActiveAdsMessage.ad_details(update,context,from_start=True)
+                        user = CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id))
+                        account_session = CRUDSession.get_by_downloader_user_id(session, user.id)[0]
+                        account = CRUDAccount.get_by_id(session, account_session.account_id)
+                        if account.role == AccountRole.DOWNLOADER:
+                            await ActiveAdsMessage.download_link(update, context, from_start=ad.id)
+                        else:
+                            await update.effective_message.reply_text("⭕️ ادمین نمیتواند لینک اختصاصی دریافت کند")
                         raise ApplicationHandlerStop()
                 except ApplicationHandlerStop:
                     raise ApplicationHandlerStop()
@@ -73,11 +79,11 @@ class StartCommand:
         raise ApplicationHandlerStop()
 
     @staticmethod
-    def check_user_is_new(user_chat_id: str) -> bool:
+    def check_user_is_new(user_chat_id: str, username: str = None) -> bool:
         with Database.get_session() as session:
             user = CRUDDownloaderUser.get_by_chat_id(session, user_chat_id)
             if not user:
-                CRUDDownloaderUser.create(db=session, chat_id=user_chat_id)
+                CRUDDownloaderUser.create(db=session, chat_id=user_chat_id, username=username)
                 return True
 
             return False
@@ -92,8 +98,9 @@ class StartCommand:
         if account_role == AccountRole.DOWNLOADER:
             message_text = "سلام کاربر عزیز، خوش آمدید! 👋" + "\n\n"
             message_text += "توضیح منو : " + "\n" + "<blockquote>"
-            message_text += "- " + "🟢 تبلیغات فعال" + " : " + "در این بخش می‌توانید فهرست تبلیغات فعال را مشاهده کرده و لینک اختصاصی هر تبلیغ را دریافت کنید." + "\n\n"
-            message_text += "- " + "👤 حساب کاربری" + " : " + "در این قسمت اطلاعات کامل حساب شما، از جمله لینک‌های اختصاصی، حساب بانکی، درخواست‌ها، فهرست کانال‌ها و ربات‌های ثبت‌شده نمایش داده می‌شود." + "\n\n"
+            message_text += "- " + "✅ تبلیغ های فعال" + " : " + "در این بخش می‌توانید فهرست تبلیغات فعال را مشاهده کرده و لینک اختصاصی هر تبلیغ را دریافت کنید." + "\n\n"
+            message_text += "- " + "📊 تبلیغ های من" + " : " + "در این بخش می‌توانید تبلیغ‌هایی را که در آن‌ها شرکت کرده‌اید را مشاهده کنید." + "\n\n"
+            message_text += "- " + "👤 حساب کاربری" + " : " + "در این قسمت اطلاعات کامل حساب شما، از جمله حساب بانکی، درخواست‌ها، فهرست کانال‌ها و ربات‌های ثبت‌شده نمایش داده می‌شود." + "\n\n"
             message_text += "- " + "🔁 انتقال" + " : " + "در این قسمت می‌توانید بخشی از موجودی خود را به حساب کاربری دیگری در ربات انتقال دهید." + "\n\n"
             message_text += "- " + "💵 برداشت" + " : " + "از این بخش می‌توانید درخواست برداشت وجه (چه به صورت ریالی و چه به صورت ترون) ثبت کنید." + "\n\n"
             message_text += "- " + "📞 ارتباط با پشتیبانی" + " : " + "از این قسمت می‌توانید آیدی پشتیبان‌ها را مشاهده کرده و جهت رفع مشکلات یا سوالات خود با آن‌ها ارتباط بگیرید." + "\n\n"
@@ -109,15 +116,6 @@ class StartCommand:
         elif account_role == AccountRole.ADMIN:
 
             message_text = "سلام ادمین عزیز، خوش آمدید! 👋" + "\n\n"
-            message_text += "توضیح امکانات : " + "\n" + "<blockquote>"
-            message_text += "- 📢 تبلیغات : " + "ثبت تبلیغ، ویرایش، بررسی وضعیت و مدیریت کامل تبلیغات." + "\n\n"
-            message_text += "- 📊 آمار : " + "مشاهده آمار روزانه، هفتگی، ماهانه و کل ربات." + "\n\n"
-            message_text += "- 🔗 مدیریت لینک : " + "سنجش کیفیت لینک‌ها، مشاهده اطلاعات لینک، باطل کردن و حذف ممبر از لینک." + "\n\n"
-            message_text += "- 📨 درخواست ها : " + "مدیریت درخواست‌های ثبت‌نام، انتقال و برداشت کاربران." + "\n\n"
-            message_text += "- 👥 کاربران : " + "مشاهده اطلاعات کاربران، ارسال پیام و فورارد همگانی." + "\n\n"
-            message_text += "- 💼 اکانت ها : " + "مشاهده و مدیریت اکانت‌ها، ویرایش و حذف آنها." + "\n\n"
-            message_text += "- 🛠️ تنظیمات : " + "تنظیمات کامل ربات برای بخش‌های مختلف، جوین اجباری، ترون اتوماتیک و…" + "\n\n"
-            message_text += "</blockquote>"
 
             if returned:
                 await context.bot.delete_message(chat_id=user_chat_id, message_id=update.effective_message.message_id)
@@ -170,3 +168,42 @@ class AdminCommand:
             msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_start, parse_mode=ParseMode.HTML)
             with Database.get_session() as session:
                 CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
+
+
+class GetMemberCommand:
+
+    @staticmethod
+    @DownloaderDecorator.message(login_require=True, role_require=AccountRole.ADMIN)
+    async def get_member(update: Update, context: CallbackContext):
+
+        link_id = int(update.effective_message.text.split("_")[1])
+        with Database.get_session() as session:
+            link = CRUDLink.get_by_id(session, link_id)
+
+            if not link:
+                raise ApplicationHandlerStop()
+
+            message_text = "📋 لیست ممبر ها :"
+
+            if link.members:
+                for chat_id, data in link.members.items():
+                    gregorian_dt = jdatetime.datetime.strptime(data[2], "%Y-%m-%d %H:%M:%S.%f")
+                    shamsi_date = jdatetime.datetime.fromgregorian(datetime=gregorian_dt)
+                    shamsi_date = shamsi_date.strftime('%Y/%m/%d | %H:%M')
+                    shamsi_date = str(shamsi_date).replace("-", "/")
+
+                    if len(message_text) < 3800:
+                        message_text += "\n\n"
+                        message_text += f"{chat_id}"
+                        message_text += "\n" + f"Username : {'@' + data[0] if data[0] else 'No Username'}"
+                        message_text += "\n" + f"Score : {int(data[1])}"
+                        message_text += "\n" + f"Date : {shamsi_date}"
+                    else:
+                        await update.effective_message.reply_text(message_text, parse_mode=ParseMode.HTML, reply_to_message_id=update.effective_message.message_id)
+                        message_text = f"{chat_id}"
+                        message_text += "\n" + f"Username : @{data[0] if data[0] else 'No Username'}"
+                        message_text += "\n" + f"Score : {int(data[1])}"
+                        message_text += "\n" + f"Date : {shamsi_date}"
+
+            await update.effective_message.reply_text(message_text, parse_mode=ParseMode.HTML, reply_to_message_id=update.effective_message.message_id)
+        raise ApplicationHandlerStop()

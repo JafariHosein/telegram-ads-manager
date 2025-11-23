@@ -2,12 +2,12 @@ from telegram import Update
 from telegram.ext import CallbackContext
 
 from database import CRUDDownloaderUser, Database
+
 from utils import DownloaderState
 
 from downloader_handlers.register import RegisterMessage
 from downloader_handlers.requests import RequestsMessage
 from downloader_handlers.login import LoginMessage
-from downloader_handlers.manage_ads import ManageAdsMessage
 from downloader_handlers.account_profile import AccountProfileMessage
 from downloader_handlers.manage_links import ManageLinksMessage
 from downloader_handlers.transfer import TransferMessage
@@ -15,6 +15,8 @@ from downloader_handlers.payout import PayoutMessage
 from downloader_handlers.settings import SettingsMessage
 from downloader_handlers.accounts import AccountsMessage
 from downloader_handlers.users import UsersMessage
+from downloader_handlers.create_ad import CreateAdMessage
+from downloader_handlers.ads_status import AdsStatusMessage
 
 
 class AllMessages:
@@ -44,21 +46,19 @@ class AllMessages:
             elif user_state == DownloaderState.GET_CAPTCHA:
                 await LoginMessage.get_captcha(update, context)
 
-            elif user_state in [DownloaderState.ENTER_AD_CATEGORY_TITLE, DownloaderState.ENTER_AD_CATEGORY_RATE]:
-                await ManageAdsMessage.create_ad_category(update, context)
-            elif user_state in [DownloaderState.EDIT_AD_CATEGORY_TITLE, DownloaderState.EDIT_AD_CATEGORY_RATE]:
-                await ManageAdsMessage.edit_ad_category(update, context)
-            elif user_state in [DownloaderState.ENTER_AD_CHANNEL_MESSAGE, DownloaderState.ENTER_AD_RATE, DownloaderState.ENTER_AD_CAPACITY, DownloaderState.ENTER_AD_PRIZE,
-                                DownloaderState.ENTER_AD_DESCRIPTION]:
-                await ManageAdsMessage.create_add(update, context)
-            elif user_state in [DownloaderState.EDIT_AD_RATE, DownloaderState.EDIT_AD_PRIZE, DownloaderState.EDIT_AD_DESCRIPTION, DownloaderState.EDIT_AD_CAPACITY]:
-                await ManageAdsMessage.edit_ad_text(update, context)
-            elif user_state in [DownloaderState.SEARCH_WITH_AD_ID, DownloaderState.SEARCH_WITH_CHANNEL_CHAT_ID]:
-                await ManageAdsMessage.search(update, context)
+            elif user_state in [DownloaderState.ENTER_AD_CHANNEL_MESSAGE, DownloaderState.ENTER_AD_RATE, DownloaderState.ENTER_AD_CAPACITY, DownloaderState.ENTER_AD_DESCRIPTION,
+                                DownloaderState.EDIT_AD_PRIZE]:
+                await CreateAdMessage.create_ad(update, context)
+            elif user_state == DownloaderState.EDIT_AD_PRIZE:
+                await AdsStatusMessage.set_prize(update, context)
+            elif user_state == DownloaderState.EDIT_AD_RATE:
+                await AdsStatusMessage.edit_rate(update, context)
+            elif user_state == DownloaderState.EDIT_AD_CAPACITY:
+                await AdsStatusMessage.edit_capacity(update, context)
 
             elif user_state == DownloaderState.ENTER_NEW_USERNAME:
                 await AccountProfileMessage.add_to_my_usernames(update, context)
-            elif user_state in [DownloaderState.ENTER_SHABA, DownloaderState.ENTER_CARD]:
+            elif user_state in [DownloaderState.ENTER_SHABA, DownloaderState.ENTER_CARD, DownloaderState.ENTER_FULL_NAME]:
                 await AccountProfileMessage.add_bank_account(update, context)
 
             elif user_state == DownloaderState.ENTER_LINK_URL:

@@ -1,6 +1,5 @@
 from .account import Account, AccountStatus, AccountRole, AccountStatusFarsi, AccountRoleFarsi
 from .ad import Ad, AdLinkType, AdChannelType, AdChannelTypeFarsi, AdLinkTypeFarsi, AdStatus, AdStatusFarsi
-from .ad_category import AdCategory
 from .ad_request import AdRequest, AdRequestStatus, AdRequestChannelType
 from .bank_account import BankAccount, BankAccountType, BankAccountTypeFarsi
 from .customer_user import CustomerUser

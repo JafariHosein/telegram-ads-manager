@@ -30,7 +30,6 @@ class AdRequest(Base):
     description: Mapped[str] = mapped_column(String, nullable=True)
     rate: Mapped[int] = mapped_column(Integer, nullable=False)
     capacity: Mapped[int] = mapped_column(Integer, nullable=False)
-    category_title: Mapped[str] = mapped_column(String, nullable=False)
     price_without_fee: Mapped[int] = mapped_column(BIGINT, nullable=False)
     final_price: Mapped[int] = mapped_column(BIGINT, nullable=False)
     status: Mapped[AdRequestStatus] = mapped_column(Enum(AdRequestStatus), nullable=False, default=AdRequestStatus.PENDING)

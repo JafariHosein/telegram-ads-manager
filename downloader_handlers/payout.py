@@ -3,14 +3,14 @@ from telegram.constants import ParseMode
 from telegram.ext import CallbackContext, ApplicationHandlerStop
 
 from bot.keyboard import DownloaderInlineButtons
-from database import Database, DownloaderDecorator, CRUDDownloaderUser, CRUDPayoutRequest, PayoutRequestStatus, PayoutRequestType, CRUDTransferRequest, TransferRequestStatus, CRUDSetting, CRUDSession, CRUDAccount, CRUDBankAccount, PayoutRequestDestinationType
+from database import Database, DownloaderDecorator, CRUDDownloaderUser, CRUDPayoutRequest, PayoutRequestStatus, PayoutRequestType, CRUDTransferRequest, TransferRequestStatus, CRUDSetting, CRUDSession, CRUDAccount, CRUDBankAccount, PayoutRequestDestinationType, AccountRole
 from utils import DownloaderState, NumberTools, Regex
 
 
 class PayoutMessage:
 
     @staticmethod
-    @DownloaderDecorator.message(login_require=True)
+    @DownloaderDecorator.message(login_require=True, role_require=AccountRole.DOWNLOADER)
     async def payout(update: Update, context: CallbackContext, returned: bool = False):
         user_chat_id = update.effective_user.id
 
@@ -81,7 +81,7 @@ class PayoutMessage:
             raise ApplicationHandlerStop()
 
     @staticmethod
-    @DownloaderDecorator.callback(login_require=True)
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.DOWNLOADER)
     async def get_payout_value(update: Update, context: CallbackContext):
         user_chat_id = update.effective_user.id
 
@@ -165,7 +165,7 @@ class PayoutMessage:
                     return
 
     @staticmethod
-    @DownloaderDecorator.callback(login_require=True)
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.DOWNLOADER)
     async def get_wallet_address(update: Update, context: CallbackContext):
         user_chat_id = update.effective_user.id
 
@@ -195,7 +195,7 @@ class PayoutMessage:
             return
 
     @staticmethod
-    @DownloaderDecorator.callback(login_require=True)
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.DOWNLOADER)
     async def get_bank_account(update: Update, context: CallbackContext):
         user_chat_id = update.effective_user.id
 
@@ -222,7 +222,7 @@ class PayoutMessage:
             return
 
     @staticmethod
-    @DownloaderDecorator.callback(login_require=True)
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.DOWNLOADER)
     async def submit(update: Update, context: CallbackContext):
         user_chat_id = update.effective_user.id
 
@@ -257,6 +257,6 @@ class PayoutMessage:
             await context.bot.edit_message_text(chat_id=user_chat_id,message_id=update.effective_message.message_id,text=message_text,reply_markup=DownloaderInlineButtons.return_to_start)
 
     @staticmethod
-    @DownloaderDecorator.callback(login_require=True)
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.DOWNLOADER)
     async def return_to_payout(update: Update, context: CallbackContext):
         await PayoutMessage.payout(update, context, True)

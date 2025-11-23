@@ -11,9 +11,9 @@ class CRUDDownloaderUser:
 
     @staticmethod
     def create(db: Session, chat_id: str, state: str = "", state_data: str = "",
-               bot_last_message_id: int = None, can_use_bot=True, captcha_failures: int = 0):
+               bot_last_message_id: int = None, can_use_bot=True, captcha_failures: int = 0, username: str = None):
         db.add(DownloaderUser(chat_id=chat_id, state=state, state_data=state_data,
-                              bot_last_message_id=bot_last_message_id, can_use_bot=can_use_bot, captcha_failures=captcha_failures))
+                              bot_last_message_id=bot_last_message_id, can_use_bot=can_use_bot, captcha_failures=captcha_failures, username=username))
         db.commit()
 
     @staticmethod

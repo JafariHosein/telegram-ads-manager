@@ -1,10 +1,9 @@
-from .commands import StartCommand, AdminCommand
+from .commands import StartCommand, AdminCommand, GetMemberCommand
 from .register import RegisterMessage
 from .messages import AllMessages
 from .requests import RequestsMessage
 from .login import LoginMessage
 from .contact_support import ContactSupportMessage
-from .manage_ads import ManageAdsMessage
 from .active_ads import ActiveAdsMessage
 from .chat_member import ChatMember
 from .account_profile import AccountProfileMessage
@@ -16,3 +15,8 @@ from .settings import SettingsMessage
 from .accounts import AccountsMessage
 from .users import UsersMessage
 from .statistics import StatisticsMessage
+from .my_ads import MyAdsMessage
+from .member_order import MemberOrderMessage
+from .ads_status import AdsStatusMessage
+from .create_ad import CreateAdMessage
+from .history_ads import HistoryAdsMessage

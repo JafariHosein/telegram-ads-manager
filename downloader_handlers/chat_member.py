@@ -197,7 +197,6 @@ class ChatMember:
                         user = CRUDDownloaderUser.get_by_id(session, session_admin[0].downloader_user_id)
                         await context.bot.send_message(chat_id=user.chat_id, text=message_text, parse_mode=ParseMode.HTML)
                 else:
-                    CRUDAd.update_status(session, ad.id, AdStatus.UNVERIFIED)
                     admins = CRUDAccount.get_by_role(session, AccountRole.ADMIN)
                     message_text = "📢 تبلیغ شماره" + " " + str(ad.id) + " تکمیل ظرفیت شده و آماده حسابرسی است." + "\n\n"
                     message_text += "⚠️ حسابرسی خودکار برای این تبلیغ غیرفعال است، لطفاً حسابرسی را به‌صورت دستی انجام دهید."

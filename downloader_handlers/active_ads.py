@@ -1,149 +1,126 @@
+import asyncio
+
 from telegram import Update, ChatMember
 from telegram.constants import ParseMode
+from telegram.error import RetryAfter
 from telegram.ext import CallbackContext, ApplicationHandlerStop
 
 from bot.keyboard import DownloaderInlineButtons
 
-from database import DownloaderDecorator, Database, CRUDAd, CRUDDownloaderUser, CRUDAdCategory, CRUDLink, AdLinkType, CRUDSession, AdStatus, CRUDAccount, UpdateType, AccountRole
-from utils import Pagination, NumberTools, Text, DownloaderState
+from database import DownloaderDecorator, Database, CRUDAd, CRUDDownloaderUser, CRUDLink, AdLinkType, CRUDSession, AdStatus, CRUDAccount, UpdateType, AccountRole
+from utils import NumberTools, Text, DownloaderState
 from downloader_handlers.account_profile import AccountProfileMessage
 
 
 class ActiveAdsMessage:
 
     @staticmethod
-    @DownloaderDecorator.message(login_require=True)
-    async def active_ads(update: Update, context: CallbackContext, returned: bool = False):
+    @DownloaderDecorator.message(login_require=True, role_require=AccountRole.DOWNLOADER)
+    async def active_ads(update: Update, context: CallbackContext, start: int = None):
         user_chat_id = update.effective_user.id
-
         with Database.get_session() as session:
             CRUDDownloaderUser.update_state(session, str(user_chat_id), DownloaderState.START)
             CRUDDownloaderUser.update_state_data(session, str(user_chat_id), "")
-            ads = CRUDAd.get_all(session)
+            raw_ads = CRUDAd.get_actives(session)
 
-            categories = CRUDAdCategory.get_all(session)
-            categories_title = []
-            for category in categories:
-                categories_title.append(category.title)
-
-            if not ads or not categories_title:
+            if not raw_ads:
                 message_text = "⭕️ در حال حاضر هیچ تبلیغ فعالی وجود ندارد."
 
-                if returned:
-                    await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_start)
-                    raise ApplicationHandlerStop()
-
-                msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_start)
-                CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
+                await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_start)
                 raise ApplicationHandlerStop()
 
-            message_text = "🔻 دسته بندی تبلیغ را انتخاب کنید"
-
-            if returned:
-                await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.active_ads(categories_title))
-                raise ApplicationHandlerStop()
-
-            msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=DownloaderInlineButtons.active_ads(categories_title))
-            CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
-
-            raise ApplicationHandlerStop()
-
-    @staticmethod
-    @DownloaderDecorator.callback(login_require=True)
-    async def show_category(update: Update, context: CallbackContext, returned: bool = False):
-        user_chat_id = update.effective_user.id
-        with Database.get_session() as session:
             user = CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id))
-            if "GoToPreviousUserActiveAds" in update.callback_query.data:
-                page = int(update.callback_query.data.split("*")[1])
-                title = str(user.state_data).split(";")[0]
-            elif "GoToNextUserActiveAds" in update.callback_query.data:
-                page = int(update.callback_query.data.split("*")[1])
-                title = str(user.state_data).split(";")[0]
-            else:
-                if not returned:
-                    title = update.callback_query.data.split("*")[1]
-                    CRUDDownloaderUser.update_state_data(session, str(user_chat_id), title + ";")
-                else:
-                    title = str(CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id)).state_data).split(";")[0]
-                page = 1
+            account_session = CRUDSession.get_by_downloader_user_id(session, user.id)[0]
+            account = CRUDAccount.get_by_id(session, account_session.account_id)
+            user_link = CRUDLink.get_by_account_id(session, account.id)
+            ads = []
+            for ad in raw_ads:
+                flag = True
+                for link in user_link:
+                    if ad.id == link.ad_id:
+                        flag = False
+                if flag:
+                    ads.append(ad)
 
-            account_id = CRUDSession.get_by_downloader_user_id(session, CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id)).id)[0].account_id
-            data = CRUDAd.get_by_title(session, title, AdStatus.ACTIVE)
-            data = sorted(data, key=lambda ad: CRUDLink.exist(session, ad.id, account_id))
+            if start is None:
+                start = 0
 
-            if not data:
-                message_text = "⭕️ در حال حاضر هیچ تبلیغ فعالی برای این دسته بندی وجود ندارد."
-                await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_active_ads)
-                return
+            counter = 0
 
-            ad_callback = "ThisAdDetails"
-            properties = [["id", "- 📎 شماره"], ["channel_name", "- 🏷️ نام کانال"], ["rate", "- 💰 نرخ"], ["capacity", "- ⚙️ ظرفیت کل"], ["count_minus", "- 🔋 ظرفیت باقی مانده"]]
-            buttons_callback = ["GoToPreviousUserActiveAds", "GoToNextUserActiveAds", "ReturnToUserActiveAds"]
-            show_number = 12
-            count = 3
+            for i, ad in enumerate(ads):
+                if i >= start:
+                    count = CRUDLink.get_count_by_ad_id(session, ad.id)
+                    message_text = "شماره تبلیغ : " + f"{ad.id}#"
+                    message_text += "\n" + "<blockquote>"
+                    message_text += "- 📢 لینک کانال : " + "\n" + ad.channel_link + "\n"
+                    message_text += "- 🏷️ نام کانال : " + ad.channel_name + "\n\n"
 
-            markup, message_text = Pagination.paginate_ads(data, callback_data=ad_callback, show_number=show_number, properties=properties, buttons_callback=buttons_callback, page=page, count=count,
-                                                           account_id=account_id)
+                    message_text += "- 💰 نرخ : " + NumberTools.format_number(ad.rate) + " تومان برای هر 100 نفر" + "\n\n"
+                    message_text += "- 📦 ظرفیت کل : " + NumberTools.format_number(ad.capacity) + "\n"
+                    message_text += "- 🔋 ظرفیت باقی مانده : " + (NumberTools.format_number(ad.capacity - count) if (ad.capacity - count) >= 0 else '0') + "\n\n"
+                    message_text += "- 🔢 آیدی عددی کانال : " + f"<code>{ad.channel_chat_id}</code>"
+                    ad_prize = True
+                    if not ad.prize:
+                        message_text += "\n" + "- 🎁 جایزه : " + f"❌ ندارد"
+                        ad_prize = False
+                    message_text += "\n\n" + "- 📝 توضیحات : " + ad.description
+                    message_text += "</blockquote>"
 
-            await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=markup, parse_mode=ParseMode.HTML)
+                    async def retry():
+                        try:
+                            await update.effective_message.reply_text(text=message_text, reply_markup=DownloaderInlineButtons.get_active_ad_menu(ad_id=ad.id, with_ad=ad_prize),
+                                                           parse_mode=ParseMode.HTML)
+                        except RetryAfter as e:
+                            print(e)
+                            await asyncio.sleep(e)
+                            await retry()
+                        except Exception as e:
+                            print(e)
+                            pass
+
+                    if counter < 10:
+                        await retry()
+                        counter += 1
+
+            if len(ads) - 1 > counter + start:
+                CRUDDownloaderUser.update_state_data(session, str(user_chat_id), f"{counter + start};")
+                message_text = "🔥 جهت مشاهده تبلیغات بیشتر از دکمه زیر استفاده کنید"
+                msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=DownloaderInlineButtons.more_ad)
+                CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
+
+            if start is None:
+                raise ApplicationHandlerStop()
 
     @staticmethod
-    @DownloaderDecorator.callback(login_require=True)
-    async def ad_details(update: Update, context: CallbackContext, returned: bool = False, from_start: bool = False):
+    @DownloaderDecorator.callback(login_require=True, check_last=False, role_require=AccountRole.DOWNLOADER)
+    async def more_ad(update: Update, context: CallbackContext):
         user_chat_id = update.effective_user.id
 
         with Database.get_session() as session:
-
-            if returned or from_start:
-                ad_id = str(CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id)).state_data).split(";")[1]
-            else:
-                ad_id = int(update.callback_query.data.split("*")[1])
-                CRUDDownloaderUser.update_state_data(session, str(user_chat_id), CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id)).state_data.split(";")[0] + f";{ad_id};")  # NOQA
-
-            ad = CRUDAd.get_by_id(session, ad_id)
-            count = CRUDLink.get_count_by_ad_id(session, ad_id)
-            account_id = CRUDSession.get_by_downloader_user_id(session, CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id)).id)[0].account_id
-            already_have = CRUDLink.exist(session, ad_id, account_id)
-
-            message_text = "شماره تبلیغ : " + f"{ad_id}#"
-            message_text += "\n" + "<blockquote>"
-            message_text += "- 📢 لینک کانال : " + "\n" + ad.channel_link + "\n"
-            message_text += "- 🏷️ نام کانال : " + ad.channel_name + "\n\n"
-
-            message_text += "- 💰 نرخ : " + NumberTools.format_number(ad.rate) + " تومان برای هر 100 نفر" + "\n\n"
-            message_text += "- 📦 ظرفیت کل : " + NumberTools.format_number(ad.capacity) + "\n"
-            message_text += "- 🔋 ظرفیت باقی مانده : " + (NumberTools.format_number(ad.capacity - count) if (ad.capacity - count) >= 0 else '0') + "\n\n"
-            message_text += "- 🔢 آیدی عددی کانال : " + f"<code>{ad.channel_chat_id}</code>"
-            ad_prize = True
-            if not ad.prize:
-                message_text += "\n" + "- 🎁 جایزه : " + f"❌ ندارد"
-                ad_prize = False
-            message_text += "\n\n" + "- 📝 توضیحات : " + ad.description
-            message_text += "</blockquote>"
-
-            if already_have:
-                message_text += "\n\n" + "✅ شما قبلا لینک اختصاصی این تبلیغ را دریافت کرده اید"
-
-            if from_start:
-                msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, parse_mode=ParseMode.HTML
-                                                     , reply_markup=DownloaderInlineButtons.get_active_ad_menu(ad_id=ad_id, with_ad=ad_prize))
-                CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
-                raise ApplicationHandlerStop()
-
-            await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, parse_mode=ParseMode.HTML
-                                                , reply_markup=DownloaderInlineButtons.get_active_ad_menu(ad_id=ad_id, with_ad=ad_prize))
+            try:
+                start = int(CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id)).state_data.split(";")[0])
+                await ActiveAdsMessage.active_ads(update, context, start)
+                await update.callback_query.answer("✅ ارسال شد")
+            except:
+                await update.callback_query.answer("از منوی " + "(✅ تبلیغ های فعال)" + " دوباره اقدام کنید", show_alert=True)
 
     @staticmethod
-    @DownloaderDecorator.callback(login_require=True)
-    async def download_link(update: Update, context: CallbackContext):
+    @DownloaderDecorator.callback(login_require=True, check_last=False, role_require=AccountRole.DOWNLOADER)
+    async def download_link(update: Update, context: CallbackContext, from_start: int = None):
         user_chat_id = update.effective_user.id
 
-        ad_id = int(update.callback_query.data.split("*")[1])
+        if from_start is None:
+            ad_id = int(update.callback_query.data.split("*")[1])
+        else:
+            ad_id = from_start
         with Database.get_session() as session:
 
             # Check Bot is Admin
             ad = CRUDAd.get_by_id(session, ad_id)
+
+            if ad.status != AdStatus.ACTIVE:
+                return
+
             is_admin = True
             try:
                 chat: ChatMember = await context.bot.get_chat_member(chat_id=ad.channel_chat_id, user_id=context.bot.id)
@@ -200,16 +177,23 @@ class ActiveAdsMessage:
                     session_admin = CRUDSession.get_by_account_id(session, admin.id)
                     user = CRUDDownloaderUser.get_by_id(session, session_admin[0].downloader_user_id)
                     await context.bot.send_message(chat_id=user.chat_id, text=message_text, parse_mode=ParseMode.HTML)
-                await update.callback_query.answer("⭕️ این تبلیغ تکمیل شده است", show_alert=True)
-                await ActiveAdsMessage.active_ads(update, context, True)
+
+                if from_start:
+                    await update.effective_message.reply_text("⭕️ این تبلیغ تکمیل شده است")
+                else:
+                    await update.callback_query.answer("⭕️ این تبلیغ تکمیل شده است", show_alert=True)
+                    await context.bot.delete_message(chat_id=user_chat_id, message_id=update.effective_message.message_id)
                 return
 
             account_id = CRUDSession.get_by_downloader_user_id(session, CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id)).id)[0].account_id
             result = CRUDLink.exist(session, ad_id, account_id)
 
             if result:
-                message_text = "لینک اختصاصی این تبلیغ قبلاً برای شما ساخته شده است." + "\n" + "برای مشاهده‌ی لینک‌ها به بخش 👤 حساب کاربری بروید."
-                await update.callback_query.answer(message_text, show_alert=True)
+                message_text = "لینک اختصاصی این تبلیغ قبلاً برای شما ساخته شده است." + "\n" + "برای مشاهده‌ی لینک‌ها به بخش 📊 تبلیغ های من بروید."
+                if from_start:
+                    await update.effective_message.reply_text(message_text)
+                else:
+                    await update.callback_query.answer(message_text, show_alert=True)
                 return
 
             is_request_type = False
@@ -220,20 +204,18 @@ class ActiveAdsMessage:
                 is_request_type = True
 
             CRUDLink.create(session, ad_id=ad_id, account_id=account_id, url=chat_link.invite_link, is_request_type=is_request_type)
-            message_text = "✅ لینک اختصاصی شما برای تبلیغ " + f"{ad_id}#" + " با موفقیت ساخته شد."
-            message_text += "\n\n" + chat_link.invite_link
-            message_text += "\n\n" + "تمامی لینک‌های اختصاصی شما در بخش (👤 حساب کاربری > 📢 تبلیغ‌های من) قابل مشاهده هستند."
+            message_text = "🔗 لینک اختصاصی شما :"
+            message_text += "\n\n" + f"<code>{chat_link.invite_link}</code>"
+            message_text += "\n\n" + " لینک‌های اختصاصی شما در بخش (📊 تبلیغ های من) قابل مشاهده هستند."
 
-            await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text,
-                                                reply_markup=DownloaderInlineButtons.link_added)
-
-    @staticmethod
-    @DownloaderDecorator.callback(login_require=True)
-    async def goto_account_profile(update: Update, context: CallbackContext):
-        await AccountProfileMessage.account_profile(update, context, True)
+            if from_start:
+                await update.effective_message.reply_text(text=message_text, parse_mode=ParseMode.HTML)
+            else:
+                await update.effective_message.reply_text(reply_to_message_id=update.effective_message.message_id, text=message_text, parse_mode=ParseMode.HTML)
+                await update.callback_query.answer("✅ ارسال شد")
 
     @staticmethod
-    @DownloaderDecorator.callback(login_require=True)
+    @DownloaderDecorator.callback(login_require=True, check_last=False, role_require=AccountRole.DOWNLOADER)
     async def view_prize(update: Update, context: CallbackContext):
         user_chat_id = update.effective_user.id
         ad_id = int(update.callback_query.data.split("*")[1])
@@ -246,12 +228,13 @@ class ActiveAdsMessage:
                 message_text += "- نفر " + Text.number_to_emoji(number) + " : " + NumberTools.format_number(value) + " تومان" + "\n\n"
             message_text += "</blockquote>"
 
-            await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_ad_details,
-                                                parse_mode=ParseMode.HTML)
+            await context.bot.send_message(chat_id=user_chat_id, text=message_text,
+                                           parse_mode=ParseMode.HTML)
+            await update.callback_query.answer("✅ ارسال شد")
 
     @staticmethod
-    @DownloaderDecorator.callback(login_require=True)
-    async def view_leaderboard(update: Update, context: CallbackContext):
+    @DownloaderDecorator.callback(login_require=True, check_last=False)
+    async def view_leaderboard(update: Update, context: CallbackContext, role_require=AccountRole.DOWNLOADER):
         user_chat_id = update.effective_user.id
         ad_id = int(update.callback_query.data.split("*")[1])
 
@@ -259,9 +242,10 @@ class ActiveAdsMessage:
             data = CRUDLink.get_top_20_by_ad_id(session, ad_id)
 
             if not data:
-                message_text = "در حال حاضر میزان مشارکت در این تبلیغ پایین است و نفرات برتر هنوز مشخص نشده‌اند."
+                message_text = f"در حال حاضر میزان مشارکت در تبلیغ {ad_id} پایین است و نفرات برتر هنوز مشخص نشده‌اند."
                 message_text += "\n\n" + "✨ " + "این بهترین فرصت برای شماست تا در میان نفرات برتر قرار بگیرید!"
-                await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_ad_details)
+                await context.bot.send_message(chat_id=user_chat_id, text=message_text)
+                await update.callback_query.answer("✅ ارسال شد")
                 return
 
             columns = ["شماره", "اکانت", "میزان عضویت"]
@@ -279,21 +263,5 @@ class ActiveAdsMessage:
 
             message_text = "لیست نفرات برتر تبلیغ" + " " + str(ad_id) + " :\n\n"
 
-            await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=markup, parse_mode=ParseMode.MARKDOWN)
-
-    @staticmethod
-    @DownloaderDecorator.callback(login_require=True)
-    async def return_to_active_ads(update: Update, context: CallbackContext):
-        with Database.get_session() as session:
-            CRUDDownloaderUser.update_state_data(session, str(update.effective_user.id), "")
-        await ActiveAdsMessage.active_ads(update, context, returned=True)
-
-    @staticmethod
-    @DownloaderDecorator.callback(login_require=True)
-    async def return_to_show_category(update: Update, context: CallbackContext):
-        await ActiveAdsMessage.show_category(update, context, returned=True)
-
-    @staticmethod
-    @DownloaderDecorator.callback(login_require=True)
-    async def return_to_ad_details(update: Update, context: CallbackContext):
-        await ActiveAdsMessage.ad_details(update, context, returned=True)
+            await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=markup, parse_mode=ParseMode.MARKDOWN)
+            await update.callback_query.answer("✅ ارسال شد")

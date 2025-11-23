@@ -1,4 +1,5 @@
 import asyncio
+from logging.handlers import RotatingFileHandler
 
 import jdatetime
 from telegram import Bot
@@ -16,15 +17,24 @@ from config import Config
 class Logger:
     LOG_FILE_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "app.log")
 
-    logging.basicConfig(filename=LOG_FILE_PATH,
-                        level=logging.INFO,
-                        format='%(asctime)s - %(levelname)s - %(message)s',
-                        filemode="w",
-                        datefmt='%Y-%m-%d %H:%M:%S',
-                        encoding="utf-8")
-
     NOTICE_LEVEL = 25
     logging.addLevelName(NOTICE_LEVEL, "NOTICE")
+
+    handler = RotatingFileHandler(
+        LOG_FILE_PATH,
+        maxBytes=15 * 1024 * 1024,
+        backupCount=5,
+        encoding="utf-8"
+    )
+
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s',
+                                  datefmt='%Y-%m-%d %H:%M:%S')
+    handler.setFormatter(formatter)
+
+    logging.basicConfig(
+        level=logging.INFO,
+        handlers=[handler]
+    )
 
     @staticmethod
     def notice(message, *args, **kwargs):

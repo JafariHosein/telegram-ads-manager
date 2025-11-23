@@ -37,14 +37,6 @@ class DownloaderState(str, enum.Enum):
     FROM_VIEW_VERIFIED_ADS = "from view verified ads"
     FROM_VIEW_NOT_VERIFIED_ADS = "from view not verified ads"
 
-    # New Category
-    ENTER_AD_CATEGORY_TITLE = "enter ad category title"
-    ENTER_AD_CATEGORY_RATE = "enter ad category rate"
-
-    # Edit Category
-    EDIT_AD_CATEGORY_TITLE = "edit ad category title"
-    EDIT_AD_CATEGORY_RATE = "edit ad category rate"
-
     # Admin
     ENTER_REASON_FOR_REJECT = "enter reason for reject"
     ENTER_REASON_FOR_REJECT_TRANSFER = "enter reason for reject transfer"
@@ -68,6 +60,7 @@ class DownloaderState(str, enum.Enum):
     # Bank Account
     ENTER_SHABA = "enter shaba"
     ENTER_CARD = "enter card"
+    ENTER_FULL_NAME = "enter full name"
 
     # Setting
     EDIT_FINANCIAL_SUPPORT = "edit financial support"

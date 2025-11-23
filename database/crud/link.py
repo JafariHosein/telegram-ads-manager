@@ -49,6 +49,11 @@ class CRUDLink:
         return db.execute(statement).scalars().all()
 
     @staticmethod
+    def get_top_5_by_ad_id(db: Session, ad_id: int) -> Sequence[Link]:
+        statement = select(Link).where(Link.ad_id == ad_id, Link.count > 0).order_by(desc(Link.count)).limit(5)
+        return db.execute(statement).scalars().all()
+
+    @staticmethod
     def get_top_by_ad_id(db: Session, ad_id: int, limit: int) -> Sequence[Link]:
         statement = select(Link).where(Link.ad_id == ad_id, Link.count > 0).order_by(desc(Link.count)).limit(limit)
         return db.execute(statement).scalars().all()

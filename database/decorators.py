@@ -75,7 +75,7 @@ class DownloaderDecorator:
         return decorator
 
     @staticmethod
-    def callback(login_require: bool = None, role_require: AccountRole = None):
+    def callback(login_require: bool = None, role_require: AccountRole = None, check_last: bool = True):
         def decorator(func):
             @functools.wraps(func)
             async def wrapper(*args, **kwargs):
@@ -92,10 +92,11 @@ class DownloaderDecorator:
                         return None
 
                     # Check Is Last Message
-                    if update.callback_query:
-                        if user.bot_last_message_id != update.effective_message.message_id:
-                            await update.callback_query.answer("❌" + " پیام منقضی شده است.")
-                            return None
+                    if check_last:
+                        if update.callback_query:
+                            if user.bot_last_message_id != update.effective_message.message_id:
+                                await update.callback_query.answer("❌" + " پیام منقضی شده است.")
+                                return None
 
                     # Check is Join
                     is_active = CRUDSetting.get_is_forced_join_active(session)

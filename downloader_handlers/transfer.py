@@ -3,14 +3,14 @@ from telegram.constants import ParseMode
 from telegram.ext import CallbackContext, ApplicationHandlerStop
 
 from bot.keyboard import DownloaderInlineButtons
-from database import Database, DownloaderDecorator, CRUDDownloaderUser, CRUDTransferRequest, CRUDAccount, CRUDSession, CRUDSetting, TransferRequestStatus, UpdateType, CRUDPayoutRequest, PayoutRequestStatus
+from database import Database, DownloaderDecorator, CRUDDownloaderUser, CRUDTransferRequest, CRUDAccount, CRUDSession, CRUDSetting, TransferRequestStatus, UpdateType, CRUDPayoutRequest, PayoutRequestStatus, AccountRole
 from utils import DownloaderState, NumberTools
 
 
 class TransferMessage:
 
     @staticmethod
-    @DownloaderDecorator.message(login_require=True)
+    @DownloaderDecorator.message(login_require=True, role_require=AccountRole.DOWNLOADER)
     async def transfer(update: Update, context: CallbackContext, returned: bool = False):
         user_chat_id = update.effective_user.id
 
@@ -52,7 +52,7 @@ class TransferMessage:
             raise ApplicationHandlerStop()
 
     @staticmethod
-    @DownloaderDecorator.callback(login_require=True)
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.DOWNLOADER)
     async def transfer_with_account_id(update: Update, context: CallbackContext):
         user_chat_id = update.effective_user.id
 
@@ -64,7 +64,7 @@ class TransferMessage:
         await context.bot.edit_message_text(chat_id=update.effective_chat.id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_transfer)
 
     @staticmethod
-    @DownloaderDecorator.callback(login_require=True)
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.DOWNLOADER)
     async def transfer_with_username(update: Update, context: CallbackContext):
         user_chat_id = update.effective_user.id
 
@@ -76,7 +76,7 @@ class TransferMessage:
         await context.bot.edit_message_text(chat_id=update.effective_chat.id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_transfer)
 
     @staticmethod
-    @DownloaderDecorator.message(login_require=True)
+    @DownloaderDecorator.message(login_require=True, role_require=AccountRole.DOWNLOADER)
     async def check_destination(update: Update, context: CallbackContext):
         user_chat_id = update.effective_user.id
 
@@ -146,7 +146,7 @@ class TransferMessage:
                 CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
 
     @staticmethod
-    @DownloaderDecorator.message(login_require=True)
+    @DownloaderDecorator.message(login_require=True, role_require=AccountRole.DOWNLOADER)
     async def validate_value(update: Update, context: CallbackContext):
         user_chat_id = update.effective_user.id
 
@@ -190,7 +190,7 @@ class TransferMessage:
             CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
 
     @staticmethod
-    @DownloaderDecorator.callback(login_require=True)
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.DOWNLOADER)
     async def submit(update: Update, context: CallbackContext):
         user_chat_id = update.effective_user.id
 
@@ -228,6 +228,6 @@ class TransferMessage:
                 return
 
     @staticmethod
-    @DownloaderDecorator.callback(login_require=True)
+    @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.DOWNLOADER)
     async def return_to_transfer(update: Update, context: CallbackContext):
         await TransferMessage.transfer(update, context, returned=True)

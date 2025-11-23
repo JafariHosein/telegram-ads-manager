@@ -22,7 +22,6 @@ class DownloaderInlineButtons:
         "PreviousPage": "⏮ صفحه قبلی",
         "Search": "🔎 جستجو",
         "See": "📪️ مشاهده",
-        "Category": "📂 دسته بندی",
         "Title": "🏷️ عنوان",
         "Rate": "💰 نرخ",
         "Normal": "🟢 عادی",
@@ -33,7 +32,7 @@ class DownloaderInlineButtons:
         "SetDisable": "❌ غیر فعال کردن",
         "Skip": "⏩ رد کردن",
         "Done": "✅ انجام دادم",
-        "SendToChannel": "📣 ارسال به کانال",
+        "SendToChannel": "📢 ارسال به چنل",
         "VerifyAd": "🧮 حسابرسی",
         "Details": "📋 جزئیات",
         "DownloadLink": "🔗 دریافت لینک",
@@ -41,7 +40,6 @@ class DownloaderInlineButtons:
         "InActiveAds": "❌ تبلیغات غیر فعال",
         "NotVerifiedAds": "⚠️ تبلیغات حسابرسی نشده",
         "VerifiedAds": "✅ تبلیغات حسابرسی شده",
-        "ByCategory": "🗂️ بر اساس دسته بندی",
         "AllAds": "📚 تمام تبلیغات",
         "Prize": "🎖️ جایزه",
         "AutoComplete": "🤖 حسابرسی خودکار",
@@ -50,7 +48,7 @@ class DownloaderInlineButtons:
         "WithChatID": "#️⃣ آیدی عددی کانال",
         "WithAdID": "📇 شماره تبلیغ",
         "SeePrize": "🎁 مشاهده جوایز",
-        "SeeLeaderBoard": "🏆 برترین ها",
+        "SeeLeaderBoard": "📊 نفرات برتر",
         "DownloadSpecialLink": "🔗 دریافت لینک اختصاصی",
         "GoToMyProfile": "👤 رفتن به حساب کاربری",
         "MyLinks": "🔗 لینک ها",
@@ -60,7 +58,7 @@ class DownloaderInlineButtons:
         "ChangePassword": "🔒 تغییر رمز عبور",
         "Logout": "⏹️ خروج از حساب کاربری",
         "Yes": "✅ بله",
-        "Verify": "📋 حسابرسی",
+        "Verify": "📊 حسابرسی",
         "LinkUsers": "👥 مشاهده کاربران",
         "DeleteLink": "❌ حذف لینک",
         "WithAccountID": "🏷️ شماره اکانت",
@@ -77,8 +75,8 @@ class DownloaderInlineButtons:
         "IsAutoTransfer": "🔁 تایید انتقال خودکار",
         "LogChannelChatId": "⚙️ کانال لاگ",
         "MainChannelChatId": "📡 کانال اصلی",
-        "TransferWalletPrivateKey": "🔑 کلید ولت انتقال خودکار",
-        "TransferWalletPublicKey": "📥 آدرس ولت انتقال خودکار",
+        "TransferWalletPrivateKey": "🔑 کلید ترون اتوماتیک",
+        "TransferWalletPublicKey": "📥 آدرس ترون اتوماتیک",
         "ChangeStatus": "🔰 تغییر وضعیت",
         "SendMessageToAccount": "🚩 ارسال پیام به کاربر",
         "Balance": "💰 موجودی",
@@ -88,7 +86,20 @@ class DownloaderInlineButtons:
         "Admin": "👑 ادمین",
         "Downloader": "📥 دانلودر",
         "GlobalMessage": "📢 پیام همگانی",
-        "BlockList": "🚫 بلک لیست"
+        "BlockList": "🚫 بلک لیست",
+        "MoreAd": "✨ تبلیغات بیشتر",
+        "Update": "♻️ بروزرسانی",
+        "GetAdData": "⛓️ دریافت اطلاعات",
+        "StatsAdNow": "🔰 آمار کنونی",
+        "EditAdRate": "✍️ ادیت قیمت",
+        "SetAdPrize": "🎁 تعیین جایزه",
+        "RemoveAdPrize": "🎁 حذف جایزه",
+        "DeleteAd": "🚫 حذف تبلیغ",
+        "AdAvgPoint": "🔥 سنجش کیفیت لینک",
+        "EditAdCapacity": "⏳ ادیت ظرفیت",
+        "ReverseVerify": "حسابرسی معکوس",
+        "TopFive": "پنج نفر اول"
+
     }
 
     register_empty = InlineKeyboardMarkup([
@@ -155,7 +166,6 @@ class DownloaderInlineButtons:
         [InlineKeyboardButton(f"{words["Add"]}", callback_data="AddNewAd")],
         [InlineKeyboardButton(f"{words["See"]}", callback_data="SeeAds"),
          InlineKeyboardButton(f"{words["Search"]}", callback_data="SearchAd")],
-        [InlineKeyboardButton(f"{words["Category"]}", callback_data="AdCategory")],
         [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToStart")]
     ])
 
@@ -165,46 +175,24 @@ class DownloaderInlineButtons:
         [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToManageAds")]
     ])
 
-    categories = InlineKeyboardMarkup([
-        [InlineKeyboardButton(f"{words["Add"]}", callback_data="CreateAdCategory")],
-        [InlineKeyboardButton(f"{words["Delete"]}", callback_data="RemoveAdCategory"),
-         InlineKeyboardButton(f"{words["Edit"]}", callback_data="EditAdCategory")],
-        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToManageAds")]
-    ])
-    categories_empty = InlineKeyboardMarkup([
-        [InlineKeyboardButton(f"{words["Add"]}", callback_data="CreateAdCategory")],
-        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToManageAds")]
-    ])
-
-    edit_category = InlineKeyboardMarkup([
-        [InlineKeyboardButton(f"{words["Title"]}", callback_data="EditTitleThisCategory"),
-         InlineKeyboardButton(f"{words["Rate"]}", callback_data="EditRateThisCategory")],
-        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToCategories")]
-    ])
-
     choose_link_type_for_ad = InlineKeyboardMarkup([
-        [InlineKeyboardButton(f"{words["Normal"]}", callback_data="ChooseThisLinkTypeForAd*NORMAL"), InlineKeyboardButton(f"{words["RequestType"]}", callback_data="ChooseThisLinkTypeForAd*REQUEST")],
-        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToManageAds")]
+        [InlineKeyboardButton(f"{words["Normal"]}", callback_data="ChooseThisLinkTypeForAd*NORMAL"), InlineKeyboardButton(f"{words["RequestType"]}", callback_data="ChooseThisLinkTypeForAd*REQUEST")]
     ])
 
     choose_auto_complete_for_ad = InlineKeyboardMarkup([
-        [InlineKeyboardButton(f"{words["Enable"]}", callback_data="ChooseThisAutoCompleteForAd*True"), InlineKeyboardButton(f"{words["Disable"]}", callback_data="ChooseThisAutoCompleteForAd*False")],
-        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToManageAds")]
+        [InlineKeyboardButton(f"{words["Enable"]}", callback_data="ChooseThisAutoCompleteForAd*True"), InlineKeyboardButton(f"{words["Disable"]}", callback_data="ChooseThisAutoCompleteForAd*False")]
     ])
 
     skip_prize_for_ad = InlineKeyboardMarkup([
-        [InlineKeyboardButton(f"{words["Skip"]}", callback_data="SkipThisPrizeForAd")],
-        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToManageAds")]
+        [InlineKeyboardButton(f"{words["Skip"]}", callback_data="SkipThisPrizeForAd")]
     ])
 
     submit_ad = InlineKeyboardMarkup([
-        [InlineKeyboardButton(f"{words["Submit"]}", callback_data="SubmitThisAd")],
-        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToManageAds")]
+        [InlineKeyboardButton(f"{words["Submit"]}", callback_data="SubmitThisAd")]
     ])
 
     i_admin_bot = InlineKeyboardMarkup([
-        [InlineKeyboardButton(f"{words["Done"]}", callback_data="IAdminBotForThisAd")],
-        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToManageAds")]
+        [InlineKeyboardButton(f"{words["Done"]}", callback_data="IAdminBotForThisAd")]
     ])
 
     all_ads = InlineKeyboardMarkup([
@@ -224,18 +212,12 @@ class DownloaderInlineButtons:
         [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToViewAds")]
     ])
 
-    link_added = InlineKeyboardMarkup([
-        [InlineKeyboardButton(f"{words["GoToMyProfile"]}", callback_data="GoToAccountProfile")],
-        [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToAdDetails")]
-    ])
-
     return_to_ad_details = InlineKeyboardMarkup([
         [InlineKeyboardButton(f"{words["Return"]}", callback_data="ReturnToAdDetails")]
     ])
 
     account_profile = InlineKeyboardMarkup([
-        [InlineKeyboardButton(f"{words["MyLinks"]}", callback_data="MyAccountLinks"),
-         InlineKeyboardButton(f"{words["MyChannels"]}", callback_data="MyAccountChannels")],
+        [InlineKeyboardButton(f"{words["MyChannels"]}", callback_data="MyAccountChannels")],
         [InlineKeyboardButton(f"{words["MyHistory"]}", callback_data="MyAccountHistory"),
          InlineKeyboardButton(f"{words["MyBankAccounts"]}", callback_data="MyAccountBankAccounts")],
         [InlineKeyboardButton(f"{words["ChangePassword"]}", callback_data="ChangeMyPassword"),
@@ -462,6 +444,46 @@ class DownloaderInlineButtons:
         [InlineKeyboardButton(f"{words["Return"]}", callback_data="BlockList")]
     ])
 
+    more_ad = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["MoreAd"]}", callback_data="MoreAd")]
+    ])
+
+    more_history_ad = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{words["MoreAd"]}", callback_data="MoreHistoryAd")]
+    ])
+
+    @staticmethod
+    def history_ad(ad_id: int):
+        return InlineKeyboardMarkup([
+            [InlineKeyboardButton(f"{DownloaderInlineButtons.words["TopFive"]}", callback_data=f"TopFiveThisAd*{ad_id}"),
+             InlineKeyboardButton(f"{DownloaderInlineButtons.words["StatsAdNow"]}", callback_data=f"ThisAdStatsAdNow*{ad_id}")],
+            [InlineKeyboardButton(f"{DownloaderInlineButtons.words["GetAdData"]}", callback_data=f"ThisAdGetAdData*{ad_id}"),
+             InlineKeyboardButton(f"{DownloaderInlineButtons.words["ReverseVerify"]}", callback_data=f"ReverseVerify*{ad_id}")]
+        ])
+
+    @staticmethod
+    def ad_status_menu(ad_id: int):
+        return InlineKeyboardMarkup([
+            [InlineKeyboardButton(f"{DownloaderInlineButtons.words["GetAdData"]}", callback_data=f"ThisAdGetAdData*{ad_id}"),
+             InlineKeyboardButton(f"{DownloaderInlineButtons.words["StatsAdNow"]}", callback_data=f"ThisAdStatsAdNow*{ad_id}")],
+            [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Verify"]}", callback_data=f"ThisAdVerify*{ad_id}")],
+            [InlineKeyboardButton(f"{DownloaderInlineButtons.words["EditAdRate"]}", callback_data=f"ThisAdEditAdRate*{ad_id}"),
+             InlineKeyboardButton(f"{DownloaderInlineButtons.words["EditAdCapacity"]}", callback_data=f"ThisAdEditAdCapacity*{ad_id}")],
+            [InlineKeyboardButton(f"{DownloaderInlineButtons.words["RemoveAdPrize"]}", callback_data=f"ThisAdRemoveAdPrize*{ad_id}"),
+             InlineKeyboardButton(f"{DownloaderInlineButtons.words["SetAdPrize"]}", callback_data=f"ThisAdSetAdPrize*{ad_id}")],
+            [InlineKeyboardButton(f"{DownloaderInlineButtons.words["DeleteAd"]}", callback_data=f"ThisAdDeleteAd*{ad_id}"),
+             InlineKeyboardButton(f"{DownloaderInlineButtons.words["SendToChannel"]}", callback_data=f"ThisAdSendToChannel*{ad_id}")],
+            [InlineKeyboardButton(f"{DownloaderInlineButtons.words["AdAvgPoint"]}", callback_data=f"ThisAdAdAvgPoint*{ad_id}")],
+
+        ])
+
+    @staticmethod
+    def my_ads_menu(link_id: int):
+        return InlineKeyboardMarkup([
+            [InlineKeyboardButton(f"{DownloaderInlineButtons.words["SeeLeaderBoard"]}", callback_data=f"SeeLeaderBoardThisMyAd*{link_id}"),
+             InlineKeyboardButton(f"{DownloaderInlineButtons.words["Description"]}", callback_data=f"SeeDescriptionThisMyAd*{link_id}")],
+            [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Update"]}", callback_data=f"UpdateThisMyAd*{link_id}")]
+        ])
 
     @staticmethod
     def return_to_view_link_menu(link_id: int):
@@ -474,23 +496,13 @@ class DownloaderInlineButtons:
         if not with_ad:
             return InlineKeyboardMarkup([
                 [InlineKeyboardButton(f"{DownloaderInlineButtons.words["SeeLeaderBoard"]}", callback_data=f"SeeLeaderBoardOfThisAd*{ad_id}")],
-                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["DownloadSpecialLink"]}", callback_data=f"DownloadLinkOfThisAd*{ad_id}")],
-                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Return"]}", callback_data="ReturnToShowCategory")]
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["DownloadSpecialLink"]}", callback_data=f"DownloadLinkOfThisAd*{ad_id}")]
             ])
         return InlineKeyboardMarkup([
             [InlineKeyboardButton(f"{DownloaderInlineButtons.words["SeePrize"]}", callback_data=f"SeePrizeOfThisAd*{ad_id}"),
              InlineKeyboardButton(f"{DownloaderInlineButtons.words["SeeLeaderBoard"]}", callback_data=f"SeeLeaderBoardOfThisAd*{ad_id}")],
-            [InlineKeyboardButton(f"{DownloaderInlineButtons.words["DownloadSpecialLink"]}", callback_data=f"DownloadLinkOfThisAd*{ad_id}")],
-            [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Return"]}", callback_data="ReturnToShowCategory")]
+            [InlineKeyboardButton(f"{DownloaderInlineButtons.words["DownloadSpecialLink"]}", callback_data=f"DownloadLinkOfThisAd*{ad_id}")]
         ])
-
-    @staticmethod
-    def active_ads(cetegories_title: list):
-        buttons = []
-        for title in cetegories_title:
-            buttons.append([InlineKeyboardButton(f"{title}", callback_data=f"ShowThisCategoryTitle*{title}")])
-        buttons.append([InlineKeyboardButton(f"{DownloaderInlineButtons.words["Return"]}", callback_data="ReturnToStart")])
-        return InlineKeyboardMarkup(buttons)
 
     @staticmethod
     def get_edit_ads_menu(ad_id: int) -> InlineKeyboardMarkup:
@@ -565,8 +577,7 @@ class DownloaderInlineButtons:
                  InlineKeyboardButton(f"{DownloaderInlineButtons.words["Delete"]}", callback_data=f"DeleteThisAd*{ad_id}")],
                 [InlineKeyboardButton(f"{DownloaderInlineButtons.words["SetDisable"] if is_active else DownloaderInlineButtons.words["SetEnable"]}",
                                       callback_data=f"DisableThisAd*{ad_id}" if is_active else f"EnableThisAd*{ad_id}")],
-                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Verify"]}", callback_data=f"VerifyThisAd*{ad_id}")],
-                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Return"]}", callback_data="ReturnToManageAds")]
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Verify"]}", callback_data=f"VerifyThisAd*{ad_id}")]
             ])
         elif state == DownloaderState.FROM_VIEW_ALL_ADS:
             return InlineKeyboardMarkup([
@@ -576,8 +587,7 @@ class DownloaderInlineButtons:
                  InlineKeyboardButton(f"{DownloaderInlineButtons.words["Delete"]}", callback_data=f"DeleteThisAd*{ad_id}")],
                 [InlineKeyboardButton(f"{DownloaderInlineButtons.words["SetDisable"] if is_active else DownloaderInlineButtons.words["SetEnable"]}",
                                       callback_data=f"DisableThisAd*{ad_id}" if is_active else f"EnableThisAd*{ad_id}")],
-                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Verify"]}", callback_data=f"VerifyThisAd*{ad_id}")],
-                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Return"]}", callback_data="ReturnToViewAllAds")]
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Verify"]}", callback_data=f"VerifyThisAd*{ad_id}")]
             ])
         elif state == DownloaderState.FROM_VIEW_ACTIVE_ADS:
             return InlineKeyboardMarkup([
@@ -587,8 +597,7 @@ class DownloaderInlineButtons:
                  InlineKeyboardButton(f"{DownloaderInlineButtons.words["Delete"]}", callback_data=f"DeleteThisAd*{ad_id}")],
                 [InlineKeyboardButton(f"{DownloaderInlineButtons.words["SetDisable"] if is_active else DownloaderInlineButtons.words["SetEnable"]}",
                                       callback_data=f"DisableThisAd*{ad_id}" if is_active else f"EnableThisAd*{ad_id}")],
-                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Verify"]}", callback_data=f"VerifyThisAd*{ad_id}")],
-                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Return"]}", callback_data="ReturnToViewAllActiveAds")]
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Verify"]}", callback_data=f"VerifyThisAd*{ad_id}")]
             ])
         elif state == DownloaderState.FROM_VIEW_INACTIVE_ADS:
             return InlineKeyboardMarkup([
@@ -598,8 +607,7 @@ class DownloaderInlineButtons:
                  InlineKeyboardButton(f"{DownloaderInlineButtons.words["Delete"]}", callback_data=f"DeleteThisAd*{ad_id}")],
                 [InlineKeyboardButton(f"{DownloaderInlineButtons.words["SetDisable"] if is_active else DownloaderInlineButtons.words["SetEnable"]}",
                                       callback_data=f"DisableThisAd*{ad_id}" if is_active else f"EnableThisAd*{ad_id}")],
-                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Verify"]}", callback_data=f"VerifyThisAd*{ad_id}")],
-                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Return"]}", callback_data="ReturnToViewAllInActiveAds")]
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Verify"]}", callback_data=f"VerifyThisAd*{ad_id}")]
             ])
         elif state == DownloaderState.FROM_VIEW_VERIFIED_ADS:
             return InlineKeyboardMarkup([
@@ -609,8 +617,7 @@ class DownloaderInlineButtons:
                  InlineKeyboardButton(f"{DownloaderInlineButtons.words["Delete"]}", callback_data=f"DeleteThisAd*{ad_id}")],
                 [InlineKeyboardButton(f"{DownloaderInlineButtons.words["SetDisable"] if is_active else DownloaderInlineButtons.words["SetEnable"]}",
                                       callback_data=f"DisableThisAd*{ad_id}" if is_active else f"EnableThisAd*{ad_id}")],
-                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Verify"]}", callback_data=f"VerifyThisAd*{ad_id}")],
-                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Return"]}", callback_data="ReturnToViewAllVerifiedAds")]
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Verify"]}", callback_data=f"VerifyThisAd*{ad_id}")]
             ])
         elif state == DownloaderState.FROM_VIEW_NOT_VERIFIED_ADS:
             return InlineKeyboardMarkup([
@@ -620,8 +627,7 @@ class DownloaderInlineButtons:
                  InlineKeyboardButton(f"{DownloaderInlineButtons.words["Delete"]}", callback_data=f"DeleteThisAd*{ad_id}")],
                 [InlineKeyboardButton(f"{DownloaderInlineButtons.words["SetDisable"] if is_active else DownloaderInlineButtons.words["SetEnable"]}",
                                       callback_data=f"DisableThisAd*{ad_id}" if is_active else f"EnableThisAd*{ad_id}")],
-                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Verify"]}", callback_data=f"VerifyThisAd*{ad_id}")],
-                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Return"]}", callback_data="ReturnToViewAllNotVerifiedAds")]
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Verify"]}", callback_data=f"VerifyThisAd*{ad_id}")]
             ])
         elif state in [DownloaderState.SEARCH_WITH_AD_ID, DownloaderState.SEARCH_WITH_CHANNEL_CHAT_ID]:
             return InlineKeyboardMarkup([
@@ -631,12 +637,11 @@ class DownloaderInlineButtons:
                  InlineKeyboardButton(f"{DownloaderInlineButtons.words["Delete"]}", callback_data=f"DeleteThisAd*{ad_id}")],
                 [InlineKeyboardButton(f"{DownloaderInlineButtons.words["SetDisable"] if is_active else DownloaderInlineButtons.words["SetEnable"]}",
                                       callback_data=f"DisableThisAd*{ad_id}" if is_active else f"EnableThisAd*{ad_id}")],
-                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Verify"]}", callback_data=f"VerifyThisAd*{ad_id}")],
-                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Return"]}", callback_data="ReturnToManageAds")]
+                [InlineKeyboardButton(f"{DownloaderInlineButtons.words["Verify"]}", callback_data=f"VerifyThisAd*{ad_id}")]
             ])
 
     @staticmethod
-    def make_inline_table_separated(columns: list[str], rows: list[list], return_callback: str, prefix: str = "cell") -> InlineKeyboardMarkup:
+    def make_inline_table_separated(columns: list[str], rows: list[list], prefix: str = "cell") -> InlineKeyboardMarkup:
         """
         :param columns: لیست نام ستون‌ها (برای دکمه‌ها میشه همون نام ستون یا داده استفاده بشه)
         :param rows: لیست داده‌ها
@@ -662,7 +667,6 @@ class DownloaderInlineButtons:
             keyboard.append(row_buttons)
 
         keyboard.append([InlineKeyboardButton(text="▬▬▬▬▬▬" * len(columns), callback_data=f"nothing")])
-        keyboard.append([InlineKeyboardButton(text="🔙 بازگشت", callback_data=return_callback)])
 
         return InlineKeyboardMarkup(keyboard)
 
@@ -672,19 +676,22 @@ class DownloaderReplyButtons:
         "Register": "📝 ثبت‌ نام",
         "Login": "🔑 ورود",
         "ContactSupport": "📞 ارتباط با پشتیبانی",
-        "Ads": "📢 تبلیغات",
-        "Stats": "📊 آمار",
-        "LinkManager": "🔗 مدیریت لینک",
-        "Requests": "📨 درخواست ها",
+        "AdsStatus": "📊 وضعیت تبلیغ",
+        "Stats": "📈 آمار کامل ربات",
+        "LinkManager": "✍️ مدیریت لینک",
+        "Requests": "♦️ درخواست ها",
         "Users": "👥 کاربران",
         "Accounts": "💼 اکانت ها",
+        "CreateAd": "🔰 ثبت تبلیغ",
         "Settings": "🛠️ تنظیمات",
         "CryptoOnline": "💰 قیمت لحظه ایی",
-        "Break": "⇊ ─── دکمه های دانلودر ─── ⇊",
+        "History": "📆 سوابق اجرا",
         "AccountProfile": "👤 حساب کاربری",
-        "ActiveAds": "🟢 تبلیغات فعال",
+        "ActiveAds": "✅ تبلیغ های فعال",
         "TransferBalance": "🔁 انتقال",
-        "PayoutBalance": "💵 برداشت"
+        "PayoutBalance": "💵 برداشت",
+        "MyAds": "📊 تبلیغ های من",
+        "RegisterMember": "🛒 ثبت سفارش ممبر"
     }
 
     new_user = ReplyKeyboardMarkup([
@@ -693,17 +700,17 @@ class DownloaderReplyButtons:
     ], resize_keyboard=True)
 
     admin = ReplyKeyboardMarkup([
-        [KeyboardButton(words["Ads"]), KeyboardButton(words["LinkManager"])],
-        [KeyboardButton(words["Stats"]), KeyboardButton(words["Requests"])],
-        [KeyboardButton(words["Accounts"]), KeyboardButton(words["Settings"]), KeyboardButton(words["Users"])],
-        [KeyboardButton(words["Break"])],
-        [KeyboardButton(words["AccountProfile"]), KeyboardButton(words["ActiveAds"])],
-        [KeyboardButton(words["TransferBalance"]), KeyboardButton(words["PayoutBalance"])],
-        [KeyboardButton(words["ContactSupport"]), KeyboardButton(words["CryptoOnline"])]
+        [KeyboardButton(words["AdsStatus"]), KeyboardButton(words["CreateAd"])],
+        [KeyboardButton(words["Requests"]), KeyboardButton(words["Stats"])],
+        [KeyboardButton(words["LinkManager"]), KeyboardButton(words["History"])],
+        [KeyboardButton(words["Settings"]), KeyboardButton(words["AccountProfile"])],
+        [KeyboardButton(words["Accounts"]), KeyboardButton(words["Users"])],
+        [KeyboardButton(words["ContactSupport"]), KeyboardButton(words["CryptoOnline"])],
     ], resize_keyboard=True)
 
     downloader = ReplyKeyboardMarkup([
-        [KeyboardButton(words["AccountProfile"]), KeyboardButton(words["ActiveAds"])],
+        [KeyboardButton(words["MyAds"]), KeyboardButton(words["ActiveAds"])],
+        [KeyboardButton(words["RegisterMember"]), KeyboardButton(words["AccountProfile"])],
         [KeyboardButton(words["TransferBalance"]), KeyboardButton(words["PayoutBalance"])],
         [KeyboardButton(words["ContactSupport"]), KeyboardButton(words["CryptoOnline"])]
     ], resize_keyboard=True)

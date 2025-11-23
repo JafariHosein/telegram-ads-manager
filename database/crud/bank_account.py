@@ -9,8 +9,8 @@ from database.models.bank_account import BankAccount, BankAccountType
 class CRUDBankAccount:
 
     @staticmethod
-    def create(db: Session, account_id: int, type: BankAccountType, value: str):
-        db.add(BankAccount(account_id=account_id, type=type, value=value))
+    def create(db: Session, account_id: int, type: BankAccountType, value: str, full_name: str):
+        db.add(BankAccount(account_id=account_id, type=type, value=value, full_name=full_name))
         db.commit()
 
     @staticmethod

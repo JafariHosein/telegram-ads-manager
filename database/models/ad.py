@@ -58,7 +58,6 @@ class Ad(Base):
     auto_complete: Mapped[bool] = mapped_column(Boolean, nullable=False)
     status: Mapped[AdStatus] = mapped_column(Enum(AdStatus), nullable=False, default=AdStatus.ACTIVE)
     link_type: Mapped[AdLinkType] = mapped_column(Enum(AdLinkType), nullable=False, default=AdLinkType.NORMAL)
-    category_title: Mapped[str] = mapped_column(String, nullable=False)
     prize: Mapped[dict] = mapped_column(JSONB, nullable=False, default={})
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False, onupdate=datetime.now)

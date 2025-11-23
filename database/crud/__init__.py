@@ -1,7 +1,6 @@
 from .manager import Database, UpdateType
 from .account import CRUDAccount
 from .ad import CRUDAd
-from .ad_category import CRUDAdCategory
 from .ad_request import CRUDAdRequest
 from .bank_account import CRUDBankAccount
 from .customer_user import CRUDCustomerUser

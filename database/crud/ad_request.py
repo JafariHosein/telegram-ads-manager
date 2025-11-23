@@ -10,11 +10,11 @@ class CRUDAdRequest:
 
     @staticmethod
     def create(db: Session, customer_user_id: int, channel_chat_id: str, channel_name: str, channel_type: AdRequestChannelType,
-               rate: int, capacity: int, category_title: str, price_without_fee: int, final_price: int,
+               rate: int, capacity: int,  price_without_fee: int, final_price: int,
                status: AdRequestStatus = AdRequestStatus.PENDING, description: str = None, channel_username: str = None,
                reason: str = None):
         db.add(AdRequest(customer_user_id=customer_user_id, channel_chat_id=channel_chat_id, channel_name=channel_name,
-                         channel_type=channel_type, rate=rate, capacity=capacity, category_title=category_title,
+                         channel_type=channel_type, rate=rate, capacity=capacity,
                          price_without_fee=price_without_fee, final_price=final_price, status=status,
                          description=description, channel_username=channel_username, reason=reason))
         db.commit()

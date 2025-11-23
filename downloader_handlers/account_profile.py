@@ -30,14 +30,14 @@ class AccountProfileMessage:
             message_text += "- " + "🧑‍💻" + " " + "نام کاربری" + " : " + account.username + "\n\n"
             message_text += "- " + "💵" + " " + "موجودی" + " : " + NumberTools.format_number(account.balance).replace("-", "منفی ") + " تومان"
 
-            links = CRUDLink.get_by_account_id(session, account.id)
-            if links:
-                value = 0
-                for link in links:
-                    ad = CRUDAd.get_by_id(session, link.ad_id)
-                    if ad.status in [AdStatus.ACTIVE, AdStatus.UNVERIFIED]:
-                        value += (link.count * ad.rate) / 100
-                message_text += "\n\n" + "- " + "🟢 " + "درآمد تبلیغ های فعال شما : " + NumberTools.format_number(value) + " تومان"
+            # links = CRUDLink.get_by_account_id(session, account.id)
+            # if links:
+            #     value = 0
+            #     for link in links:
+            #         ad = CRUDAd.get_by_id(session, link.ad_id)
+            #         if ad.status in [AdStatus.ACTIVE, AdStatus.UNVERIFIED]:
+            #             value += (link.count * ad.rate) / 100
+            #     message_text += "\n\n" + "- " + "🟢 " + "درآمد تبلیغ های فعال شما : " + NumberTools.format_number(value) + " تومان"
 
             shamsi_date = jdatetime.datetime.fromgregorian(datetime=account.created_at)
             shamsi_date = shamsi_date.strftime('%Y/%m/%d')
@@ -108,93 +108,6 @@ class AccountProfileMessage:
 
                 message_text = "✅ شما با موفقیت از حساب کاربری خود خارج شدید."
                 await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_start)
-
-    @staticmethod
-    @DownloaderDecorator.callback(login_require=True)
-    async def my_links(update: Update, context: CallbackContext):
-        user_chat_id = update.effective_user.id
-
-        with Database.get_session() as session:
-            user = CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id))
-            account_session = CRUDSession.get_by_downloader_user_id(session, user.id)[0]
-            account = CRUDAccount.get_by_id(session, account_session.account_id)
-            raw_links = CRUDLink.get_by_account_id(session, account.id)
-
-            if not raw_links:
-                message_text = "⭕️ " + "شما هنوز لینک اختصاصی دریافت نکرده‌اید." + "\n\n"
-                message_text += "برای دریافت لینک، از منوی «تبلیغات فعال» اقدام کنید."
-                await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_account_profile)
-                return
-
-            links = []
-            for link in raw_links:
-                ad = CRUDAd.get_by_id(session, link.ad_id)
-                if ad.status in [AdStatus.ACTIVE, AdStatus.UNVERIFIED]:
-                    links.append(link)
-
-            if "GoToPreviousMyLinks" in update.callback_query.data:
-                page_number = int(update.callback_query.data.split("*")[1])
-            elif "GoToNextViewMyLinks" in update.callback_query.data:
-                page_number = int(update.callback_query.data.split("*")[1])
-            else:
-                page_number = 1
-
-            link_callback = "ViewThisLink"
-            properties = [["ad_id", "- 🔢 شماره تبلیغ"], ["url", "- 🔗 لینک"], ["count", "- 👥 تعداد ممبر عضو شده"]]
-            buttons_callback = ["GoToPreviousMyLinks", "GoToNextViewMyLinks", "ReturnToAccountProfile"]
-            show_number = 12
-            count = 3
-
-            text = "👇 جهت مشاهده جزئیات بیشتر بر روی شماره تبلیغ مورد نظر کلیک کنید"
-
-            markup, message_text = Pagination.paginate(links, callback_data=link_callback, properties=properties, page=page_number, count=count, show_number=show_number, buttons_callback=buttons_callback,
-                                                       end_text=text, callback_number_name="id")
-            await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=markup, parse_mode=ParseMode.HTML)
-
-    @staticmethod
-    @DownloaderDecorator.callback(login_require=True)
-    async def view_link(update: Update, context: CallbackContext):
-        user_chat_id = update.effective_user.id
-        link_id = int(update.callback_query.data.split("*")[1])
-
-        with Database.get_session() as session:
-            link = CRUDLink.get_by_id(session, link_id)
-            ad = CRUDAd.get_by_id(session, link.ad_id)
-
-            all_count = 0
-            all_link = CRUDLink.get_by_ad_id(session, ad.id)
-            for link2 in all_link:
-                all_count += link2.count
-
-            message_text = "🔗 جزئیات لینک شما : " + "\n" + "<blockquote>"
-            message_text += "- آدرس لینک : " + "\n" + link.url + "\n\n"
-            message_text += "- تعداد ممبر عضو شده : " + NumberTools.format_number(link.count)
-            if link.count > 0:
-                message_text += "\n\n" + "- مبلغ شما : " + NumberTools.format_number((link.count * ad.rate) / 100) + " تومان"
-            message_text += "</blockquote>"
-
-            message_text += "\n\n" + "🔺 جزئیات تبلیغ : " + f"{ad.id}#" + "\n" + "<blockquote>"
-            message_text += "- 📢 لینک کانال : " + "\n" + ad.channel_link + "\n"
-            message_text += "- 🏷️ نام کانال : " + ad.channel_name + "\n\n"
-
-            message_text += "- 💰 نرخ : " + NumberTools.format_number(ad.rate) + " تومان برای هر 100 نفر" + "\n\n"
-            message_text += "- 📦 ظرفیت کل : " + NumberTools.format_number(ad.capacity) + "\n"
-            if ad.status == AdStatus.ACTIVE:
-                message_text += "- 🔋 ظرفیت باقی مانده : " + (NumberTools.format_number(ad.capacity - all_count) if (ad.capacity - all_count) >= 0 else '0') + "\n\n"
-            message_text += "- 🔢 آیدی عددی کانال : " + f"<code>{ad.channel_chat_id}</code>"
-
-            message_text += "\n\n" + "- 📝 توضیحات : " + ad.description
-            message_text += "</blockquote>"
-
-            if link.count > 0:
-                message_text += "\n\n" + "🔴 آیا مبلغ به موجودی من اضافه شده است؟" + "\n"
-                if ad.status == AdStatus.COMPLETED:
-                    message_text += "✅ بله"
-                else:
-                    message_text += "◾️ نه هنوز" + " پس از حسابرسی به شما اعلام میشود"
-
-            await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, parse_mode=ParseMode.HTML,
-                                                reply_markup=DownloaderInlineButtons.return_to_my_links)
 
     @staticmethod
     @DownloaderDecorator.callback(login_require=True)
@@ -327,7 +240,7 @@ class AccountProfileMessage:
                 message_text += "شماره کارت ها : " + "\n"
                 message_text += "<blockquote>"
                 for card in cards:
-                    message_text += f"{card_counter}. " + f"<code>{card.value}</code>" + "\n"
+                    message_text += f"{card_counter}. " + f"<code>{card.value}</code> | {card.full_name}" + "\n"
                     card_counter += 1
                 message_text += "</blockquote>" + "\n"
 
@@ -336,7 +249,7 @@ class AccountProfileMessage:
                 message_text += "شماره شبا ها : " + "\n"
                 message_text += "<blockquote>"
                 for shaba in shabas:
-                    message_text += f"{shaba_counter}. " + f"<code>{shaba.value}</code>" + "\n"
+                    message_text += f"{shaba_counter}. " + f"<code>{shaba.value}</code> | {shaba.full_name}" + "\n"
                     shaba_counter += 1
                 message_text += "</blockquote>" + "\n"
 
@@ -407,9 +320,9 @@ class AccountProfileMessage:
                         CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
                         return
 
-                    CRUDBankAccount.create(session, account.id, type=BankAccountType.SHABA, value=text)
-                    CRUDDownloaderUser.update_state(session, str(user_chat_id), DownloaderState.START)
-                    message_text = "✅ شماره شبا وارد شده اضافه شد"
+                    CRUDDownloaderUser.update_state(session, str(user_chat_id), DownloaderState.ENTER_FULL_NAME)
+                    CRUDDownloaderUser.update_state_data(session, str(user_chat_id), f"shaba:{text};")
+                    message_text = "⭕️ نام و نام خانوادگی مالک شماره شبا را وارد کنید"
                     msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_bank_account)
                     CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
 
@@ -428,9 +341,24 @@ class AccountProfileMessage:
                         CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
                         return
 
-                    CRUDBankAccount.create(session, account.id, type=BankAccountType.CARD, value=text)
+                    CRUDDownloaderUser.update_state(session, str(user_chat_id), DownloaderState.ENTER_FULL_NAME)
+                    CRUDDownloaderUser.update_state_data(session, str(user_chat_id), f"card:{text};")
+                    message_text = "⭕️ نام و نام خانوادگی مالک شماره کارت را وارد کنید"
+                    msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_bank_account)
+                    CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
+
+                elif user.state == DownloaderState.ENTER_FULL_NAME:
+                    if "card" in user.state_data.split(";")[0]:
+                        b_type = BankAccountType.CARD
+                    else:
+                        b_type = BankAccountType.SHABA
+
+                    value = int(user.state_data.split(";")[0].split(":")[1])
+
+                    CRUDBankAccount.create(session, account.id, b_type, value, text)
                     CRUDDownloaderUser.update_state(session, str(user_chat_id), DownloaderState.START)
-                    message_text = "✅ شماره کارت وارد شده اضافه شد"
+                    CRUDDownloaderUser.update_state_data(session, str(user_chat_id), "")
+                    message_text = "✅ ثبت شد"
                     msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_bank_account)
                     CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
 
@@ -515,7 +443,7 @@ class AccountProfileMessage:
                     if item.destination_type == PayoutRequestDestinationType.TRON:
                         message_text += "- واریز به : " + item.wallet_address + "\n"
                     else:
-                        bank_account = CRUDBankAccount.get_by_id(session,item.bank_id)
+                        bank_account = CRUDBankAccount.get_by_id(session, item.bank_id)
                         message_text += "- واریز به : " + bank_account.value + "\n"
                     message_text += "- مبلغ : " + NumberTools.format_number(item.amount) + " تومان" + "\n"
                     message_text += "- وضعیت : " + TransferRequestStatusFarsi[item.status.name].value + "\n"
@@ -523,7 +451,7 @@ class AccountProfileMessage:
                         message_text += "- دلیل رد : " + item.reason
                     message_text += "</blockquote>" + "\n\n"
 
-            await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text,reply_markup=DownloaderInlineButtons.return_to_account_profile,
+            await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_account_profile,
                                                 parse_mode=ParseMode.HTML)
 
     @staticmethod

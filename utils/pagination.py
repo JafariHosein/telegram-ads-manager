@@ -148,7 +148,7 @@ class Pagination:
         buttons.append([InlineKeyboardButton(DownloaderInlineButtons.words["Return"],
                                              callback_data=buttons_callback[2])])
 
-        message_text += "📄 صفحه " + str(page) + " " + "از " + str(page_count) + " | دسته بندی " + data[0].category_title + "\n\n"
+        message_text += "📄 صفحه " + str(page) + " " + "از " + str(page_count) + "\n\n"
         message_text += "👇 " + "جهت مشاهده جزئیات و دریافت لینک اختصاصی بر روی شماره تبلیغ مورد نظر کلیک کنید"
         markup = InlineKeyboardMarkup(buttons)
 
@@ -250,4 +250,7 @@ class Pagination:
                     return "0" + " نفر"
         elif property_name == "has_warning":
             return "⚠️ دارد" if property_value else "ندارد"
+        elif property_name == "downloader_user_id":
+            with Database.get_session() as session:
+                return CRUDDownloaderUser.get_by_id(session, int(property_value)).chat_id
         return property_value
