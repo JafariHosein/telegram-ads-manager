@@ -40,3 +40,5 @@ class Account(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
 
     foreign_username: Mapped["DownloaderUser"] = relationship("DownloaderUser", foreign_keys=[username], passive_deletes=True)
+
+

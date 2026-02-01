@@ -188,10 +188,10 @@ class Pagination:
                 if len(data) <= item + number:
                     break
                 message_text += "<blockquote>"
-                message_text += "- آیدی عددی : " + str(data[item][0]) + "\n"
-                message_text += "- یوزرنیم : " + (f"@{data[item][1][0]}" if data[item][1][0] else "ندارد") + "\n"
-                message_text += "- امتیاز کاربر : " + str(data[item][1][1]) + "\n"
-                temp_btns.append(InlineKeyboardButton(str(data[item][0]), callback_data=f"{callback_data}*{data[item][0]}"))
+                message_text += "- آیدی عددی : " + str(data[number][0]) + "\n"
+                message_text += "- یوزرنیم : " + (f"@{data[number][1][0]}" if data[number][1][0] else "ندارد") + "\n"
+                message_text += "- امتیاز کاربر : " + str(data[number][1][1]) + "\n"
+                temp_btns.append(InlineKeyboardButton(str(data[number][0]), callback_data=f"{callback_data}*{data[number][0]}"))
                 message_text += "</blockquote>" + "\n"
 
             buttons.append(temp_btns)

@@ -8,10 +8,9 @@ from bot.keyboard import DownloaderInlineButtons
 from database import DownloaderDecorator, CRUDSetting, CRUDDownloaderUser, CRUDForceJoin, Database, AccountRole
 from utils import NumberTools, TronTools, DownloaderState, Regex
 
-
 class SettingsMessage:
     background_task = None
-
+    
     @staticmethod
     @DownloaderDecorator.message(login_require=True, role_require=AccountRole.ADMIN)
     async def settings(update: Update, context: CallbackContext, returned: bool = False):

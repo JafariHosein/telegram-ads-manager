@@ -329,7 +329,7 @@ class CreateAdMessage:
                         CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
                         raise ApplicationHandlerStop()
 
-                    rate = int(text)
+                    rate = int(text) * 1000
 
                     if rate <= 0:
                         message_text = "❌ نرخ معتبر وارد کنید" + "\n\n" + "نرخ برای هر 100 ممبر را وارد کنید"

@@ -48,7 +48,7 @@ class AdsStatusMessage:
 
                 async def retry():
                     try:
-                        await update.effective_message.reply_text(message_text, parse_mode=ParseMode.HTML, reply_markup=DownloaderInlineButtons.ad_status_menu(ad.id))
+                        await update.effective_message.reply_text(message_text, parse_mode=ParseMode.HTML, reply_markup=DownloaderInlineButtons.ad_status_menu(ad.id), disable_web_page_preview=True)
                     except RetryAfter as e:
                         await asyncio.sleep(e)
                         await retry()
@@ -73,19 +73,17 @@ class AdsStatusMessage:
 
         with Database.get_session() as session:
             ad = CRUDAd.get_by_id(session, ad_id)
-            links = CRUDLink.get_by_ad_id(session, ad.id)
-
+            links = CRUDLink.get_top_by_ad_id(session, ad.id, limit=20)
             message_text = "🔰 کد تبلیغ : " + f"{ad.id}" + "\n\n"
-
             count = 0
             for i, link in enumerate(links, start=1):
                 count += link.count
                 user = CRUDDownloaderUser.get_by_id(session, CRUDSession.get_by_account_id(session, link.account_id)[0].downloader_user_id)
                 if len(message_text) < 3800:
-                    message_text += f"#{i} : {user.chat_id} | {user.username if user.username else '-'} | {link.count} | {NumberTools.format_number(link.count * (ad.rate / 100))}T" + "\n\n"
+                    message_text += f"#{i} : <a href=\"tg://user?id={user.chat_id}\">{user.chat_id}</a> | {'@' + user.username if user.username else '-'} | {link.count} | {NumberTools.format_number(link.count * (ad.rate / 100))}T" + "\n\n"
                 else:
                     await update.effective_message.reply_text(message_text, reply_to_message_id=update.effective_message.message_id, parse_mode=ParseMode.HTML)
-                    message_text = f"#{i} : {user.chat_id} | {'@' + user.username if user.username else '-'} | {link.count} | {NumberTools.format_number(link.count * (ad.rate / 100))}T" + "\n\n"
+                    message_text = f"#{i} : <a href=\"tg://user?id={user.chat_id}\">{user.chat_id}</a> | {'@' + user.username if user.username else '-'} | {link.count} | {NumberTools.format_number(link.count * (ad.rate / 100))}T" + "\n\n"
 
             message_text += f"Total : {count}"
 
@@ -185,6 +183,7 @@ class AdsStatusMessage:
                     print(e)
                     pass
                 full_value += new_balance
+                await context.bot.revoke_chat_invite_link(chat_id=ad.channel_chat_id, invite_link=ad_link.url)
             CRUDAd.update_status(session, ad_id, AdStatus.COMPLETED)
             message_text = "✅ حسابرسی تبلیغ " + str(ad.id) + " انجام شد."
             message_text += "\n\n" + "میزان مبلغ اضافه شده به موجودی ها : " + NumberTools.format_number(full_value) + " تومان"
@@ -348,12 +347,13 @@ class AdsStatusMessage:
 
             if channel_chat_id:
                 try:
-                    message_text = "تبلیغ شماره " + "༺" + f"{ad.id}" + "༻" + " فعال شد" + "🎊"
-                    message_text += "\n\n" + "🏦 قیمت هر100ممبر : " + f"{NumberTools.format_number(ad.rate)}" + " تومان"
-                    message_text += "\n" + "📉تعداد سفارش: " + f"{NumberTools.format_number(ad.capacity)}" + " عدد"
-                    message_text += "\n" + "🖼 موضوع کانال : " + ad.channel_name
-                    message_text += "\n" + "🛍آیدی عددی چنل : " + f"{ad.channel_chat_id}"
-                    message_text += "\n" + "❇️ توضیحات: " + (ad.description if ad.description else "بدون توضیحات")
+                    message_text = "تـبـلـیـغ شــمــاره" + "【" + f" {ad.id} " + "】" + " " + "بــا " + "مــوفــقــیــت فـعـال شـد | 𝑽𝑰𝑷 💎" + "\n\n"
+                    message_text += "💵 قیمت هر ۱۰۰۰ ممبر: " + f"{NumberTools.format_number(ad.rate * 10)}" + " تـومـان"
+                    message_text += "\n" + "📊 تعداد سفارش: " + f"{NumberTools.format_number(ad.capacity)}" + " مـمـبـر"
+                    message_text += "\n" + "🍒 موضوع کانال: " + ad.channel_name
+                    message_text += "\n" + "🆔 آیدی عددی کانال: " + f"{ad.channel_chat_id}"
+                    message_text += "\n" + "❇️ توضیحات: "
+                    message_text += "\n" + f"{ad.description}"
 
                     if admin_username:
                         message_text += "\n<blockquote>" + "✨ جهت سفارش ممبر : " + admin_username + "</blockquote>"

@@ -15,6 +15,7 @@ class HistoryAdsMessage:
     @DownloaderDecorator.message(login_require=True, role_require=AccountRole.ADMIN)
     async def history_ad(update: Update, context: CallbackContext, start: int = None):
         with Database.get_session() as session:
+            CRUDDownloaderUser.update_state(session, str(update.effective_user.id), DownloaderState.START)
             ads = CRUDAd.get_completed(session)
 
             if not ads:
@@ -46,8 +47,7 @@ class HistoryAdsMessage:
                 msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=DownloaderInlineButtons.more_history_ad)
                 CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
 
-            if start is None:
-                raise ApplicationHandlerStop()
+            raise ApplicationHandlerStop()
 
     @staticmethod
     @DownloaderDecorator.callback(login_require=True, check_last=False, role_require=AccountRole.ADMIN)
@@ -80,7 +80,7 @@ class HistoryAdsMessage:
             message_text = ""
             for i, link in enumerate(links, start=1):
                 user = CRUDDownloaderUser.get_by_id(session, CRUDSession.get_by_account_id(session, link.account_id)[0].downloader_user_id)
-                message_text += f"#{i} : {user.chat_id} | {user.username if user.username else '-'} | {link.count} | {NumberTools.format_number(link.count * (ad.rate / 100))}T" + "\n\n"
+                message_text += f"#{i} : {user.chat_id} | {'@' + user.username if user.username else '-'} | {link.count} | {NumberTools.format_number(link.count * (ad.rate / 100))}T" + "\n\n"
 
             await update.callback_query.answer("✅ ارسال شد")
             await update.effective_message.reply_text(message_text, reply_to_message_id=update.effective_message.message_id, parse_mode=ParseMode.HTML)

@@ -58,7 +58,6 @@ class RequestsMessage:
     @DownloaderDecorator.callback(login_require=True, role_require=AccountRole.ADMIN)
     async def pending_register_requests(update: Update, context: CallbackContext):
         user_chat_id = update.effective_user.id
-
         with Database.get_session() as session:
             requests = CRUDRegisterRequest.get_by_status(session, RegisterRequestStatus.PENDING)
 
@@ -73,7 +72,8 @@ class RequestsMessage:
                 message_text = "درخواست عضویت" + "\n\n"
                 message_text += "جزئیات درخواست : " + "\n" + "<blockquote>"
                 message_text += "- " + "شماره درخواست : " + f"{request.id}" + "\n\n"
-                message_text += "- " + "آیدی عدد کاربر : " + f"{user.chat_id}" + "\n\n"
+                message_text += "- " + "آیدی عدد کاربر : " + f"<a href=\"tg://user?id={user.chat_id}\">{user.chat_id}</a>" + "\n"
+                message_text += "- " + "یوزرنیم کاربر : " + f"{'@' + user.username if user.username else 'ندارد'}" + "\n\n"
                 message_text += "- " + "یوزرنیم های مرتبط : "
                 for username, username_type in dict(request.linked_username).items():
                     message_text += "\n" + f"{counter}. {username} - {"ربات" if username_type == "bot" else "کانال"}"
@@ -123,7 +123,8 @@ class RequestsMessage:
                 message_text = "درخواست عضویت" + "\n\n"
                 message_text += "جزئیات درخواست : " + "\n" + "<blockquote>"
                 message_text += "- " + "شماره درخواست : " + f"{request.id}" + "\n\n"
-                message_text += "- " + "آیدی عدد کاربر : " + f"{user.chat_id}" + "\n\n"
+                message_text += "- " + "آیدی عدد کاربر : " + f"<a href=\"tg://user?id={user.chat_id}\">{user.chat_id}</a>" + "\n"
+                message_text += "- " + "یوزرنیم کاربر : " + f"{'@' + user.username if user.username else 'ندارد'}" + "\n\n"
                 message_text += "- " + "یوزرنیم های مرتبط : "
                 for username, username_type in dict(request.linked_username).items():
                     message_text += "\n" + f"{counter}. {username} - {"ربات" if username_type == "bot" else "کانال"}"
@@ -173,7 +174,8 @@ class RequestsMessage:
                 message_text = "درخواست عضویت" + "\n\n"
                 message_text += "جزئیات درخواست : " + "\n" + "<blockquote>"
                 message_text += "- " + "شماره درخواست : " + f"{request.id}" + "\n\n"
-                message_text += "- " + "آیدی عدد کاربر : " + f"{user.chat_id}" + "\n\n"
+                message_text += "- " + "آیدی عدد کاربر : " + f"<a href=\"tg://user?id={user.chat_id}\">{user.chat_id}</a>" + "\n"
+                message_text += "- " + "یوزرنیم کاربر : " + f"{'@' + user.username if user.username else 'ندارد'}" + "\n\n"
                 message_text += "- " + "یوزرنیم های مرتبط : "
                 for username, username_type in dict(request.linked_username).items():
                     message_text += "\n" + f"{counter}. {username} - {"ربات" if username_type == "bot" else "کانال"}"

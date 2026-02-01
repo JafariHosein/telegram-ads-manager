@@ -26,7 +26,7 @@ class ActiveAdsMessage:
             if not raw_ads:
                 message_text = "⭕️ در حال حاضر هیچ تبلیغ فعالی وجود ندارد."
 
-                await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_start)
+                await context.bot.send_message(chat_id=user_chat_id, text=message_text)
                 raise ApplicationHandlerStop()
 
             user = CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id))
@@ -46,6 +46,11 @@ class ActiveAdsMessage:
                 start = 0
 
             counter = 0
+
+            if not ads:
+                message_text = "⭕️ در حال حاضر هیچ تبلیغ فعالی وجود ندارد."
+                await context.bot.send_message(chat_id=user_chat_id, text=message_text)
+                raise ApplicationHandlerStop()
 
             for i, ad in enumerate(ads):
                 if i >= start:
@@ -69,7 +74,7 @@ class ActiveAdsMessage:
                     async def retry():
                         try:
                             await update.effective_message.reply_text(text=message_text, reply_markup=DownloaderInlineButtons.get_active_ad_menu(ad_id=ad.id, with_ad=ad_prize),
-                                                           parse_mode=ParseMode.HTML)
+                                                                      parse_mode=ParseMode.HTML)
                         except RetryAfter as e:
                             print(e)
                             await asyncio.sleep(e)
@@ -248,7 +253,7 @@ class ActiveAdsMessage:
                 await update.callback_query.answer("✅ ارسال شد")
                 return
 
-            columns = ["شماره", "اکانت", "میزان عضویت"]
+            columns = ["رتبه", "اکانت", "میزان عضویت"]
             data_text = []
             i = 1
             for row in data:
@@ -259,7 +264,7 @@ class ActiveAdsMessage:
                 data_text.append([str(i), "هیچکس", "هیچکس"])
                 i += 1
 
-            markup = DownloaderInlineButtons.make_inline_table_separated(columns, data_text, return_callback="ReturnToAdDetails")
+            markup = DownloaderInlineButtons.make_inline_table_separated(columns, data_text)
 
             message_text = "لیست نفرات برتر تبلیغ" + " " + str(ad_id) + " :\n\n"
 

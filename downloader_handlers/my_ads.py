@@ -60,7 +60,7 @@ class MyAdsMessage:
                 async def retry():
                     try:
                         await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=DownloaderInlineButtons.my_ads_menu(link.id),
-                                                       parse_mode=ParseMode.HTML)
+                                                       parse_mode=ParseMode.HTML, disable_web_page_preview=True)
                     except RetryAfter as e:
                         await asyncio.sleep(e)
                         await retry()
@@ -100,7 +100,7 @@ class MyAdsMessage:
 
             try:
                 await context.bot.edit_message_text(chat_id=user_chat_id, message_id=update.effective_message.message_id, text=message_text, reply_markup=DownloaderInlineButtons.my_ads_menu(link.id),
-                                                    parse_mode=ParseMode.HTML)
+                                                    parse_mode=ParseMode.HTML, disable_web_page_preview=True)
             except Exception as e:
                 pass
 
@@ -140,7 +140,7 @@ class MyAdsMessage:
                     await update.callback_query.answer("✅ ارسال شد")
                     return
 
-                columns = ["شماره", "اکانت", "میزان عضویت"]
+                columns = ["رتبه", "اکانت", "میزان عضویت"]
                 data_text = []
                 i = 1
                 for row in data:
@@ -151,7 +151,7 @@ class MyAdsMessage:
                     data_text.append([str(i), "هیچکس", "هیچکس"])
                     i += 1
 
-                markup = DownloaderInlineButtons.make_inline_table_separated(columns, data_text, )
+                markup = DownloaderInlineButtons.make_inline_table_separated(columns, data_text)
 
                 message_text = "لیست نفرات برتر تبلیغ" + " " + str(ad_id) + " :\n\n"
 

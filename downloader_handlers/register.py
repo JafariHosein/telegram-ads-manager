@@ -91,32 +91,33 @@ class RegisterMessage:
                                                 reply_markup=DownloaderInlineButtons.return_to_register)
         elif update.effective_message.text:
             text = update.effective_message.text
-            if not Regex.is_username(text):
-                message_text = "❌ متن ارسالی نامعتبر"
-                message_text += "\n\n" + "- یوزنیم معتبر ارسال کنید."
-                msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_register)
-                with Database.get_session() as session:
-                    CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
-                return
 
-            with Database.get_session() as session:
-                state_data = CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id)).state_data
+            data = text.splitlines()
 
-            if Regex.contains_exact(state_data, text):
-                message_text = "❌ این یوزرنیم را قبلا ثبت کرده اید"
-                message_text += "\n\n" + "- یوزنیم جدید ارسال کنید."
-                msg = await context.bot.send_message(chat_id=user_chat_id, text=message_text, reply_markup=DownloaderInlineButtons.return_to_register)
-                with Database.get_session() as session:
-                    CRUDDownloaderUser.update_bot_last_message_id(session, str(user_chat_id), msg.id)
-                return
+            final_data = []
 
-            if text.endswith("bot"):
+            for username in data:
+                if not Regex.is_username(username):
+                    message_text = "❌ ورودی نامعتبر، دوباره تلاش کنید"
+                    await update.effective_message.reply_text(message_text)
+                    return
+
                 with Database.get_session() as session:
-                    CRUDDownloaderUser.update_state_data(session, str(user_chat_id), state_data + f"{text}-bot;")
-            else:
-                with Database.get_session() as session:
-                    CRUDDownloaderUser.update_state_data(session, str(user_chat_id), state_data + f"{text}-channel;")
-                    CRUDDownloaderUser.update_state(session, str(user_chat_id), DownloaderState.START)
+                    state_data = CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id)).state_data
+
+                if Regex.contains_exact(state_data, username):
+                    continue
+
+                final_data.append(username)
+
+                if username.endswith("bot"):
+                    with Database.get_session() as session:
+                        CRUDDownloaderUser.update_state_data(session, str(user_chat_id), state_data + f"{username}-bot;")
+                else:
+                    with Database.get_session() as session:
+                        CRUDDownloaderUser.update_state_data(session, str(user_chat_id), state_data + f"{username}-channel;")
+                        CRUDDownloaderUser.update_state(session, str(user_chat_id), DownloaderState.START)
+
 
             await RegisterMessage.register(update, context, returned=False, clear=False)
 

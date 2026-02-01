@@ -42,9 +42,9 @@ class StartCommand:
                         ad = CRUDAd.get_by_id(ssn, ad_id)
                         if ad.status != AdStatus.ACTIVE:
                             raise Exception()
-                        user = CRUDDownloaderUser.get_by_chat_id(session, str(user_chat_id))
-                        account_session = CRUDSession.get_by_downloader_user_id(session, user.id)[0]
-                        account = CRUDAccount.get_by_id(session, account_session.account_id)
+                        user = CRUDDownloaderUser.get_by_chat_id(ssn, str(user_chat_id))
+                        account_session = CRUDSession.get_by_downloader_user_id(ssn, user.id)[0]
+                        account = CRUDAccount.get_by_id(ssn, account_session.account_id)
                         if account.role == AccountRole.DOWNLOADER:
                             await ActiveAdsMessage.download_link(update, context, from_start=ad.id)
                         else:
@@ -192,18 +192,19 @@ class GetMemberCommand:
                     shamsi_date = shamsi_date.strftime('%Y/%m/%d | %H:%M')
                     shamsi_date = str(shamsi_date).replace("-", "/")
 
-                    if len(message_text) < 3800:
+                    if len(message_text) < 3500:
                         message_text += "\n\n"
-                        message_text += f"{chat_id}"
-                        message_text += "\n" + f"Username : {'@' + data[0] if data[0] else 'No Username'}"
-                        message_text += "\n" + f"Score : {int(data[1])}"
-                        message_text += "\n" + f"Date : {shamsi_date}"
+                        message_text += "آیدی عددی : " + f"<a href=\"tg://user?id={chat_id}\">{chat_id}</a>"
+                        message_text += "\n" + f"یوزرنیم : {'@' + data[0] if data[0] else 'ندارد'}"
+                        message_text += "\n" + f"نمره : {int(data[1])}"
+                        message_text += "\n" + f"تاریخ : {shamsi_date}"
                     else:
                         await update.effective_message.reply_text(message_text, parse_mode=ParseMode.HTML, reply_to_message_id=update.effective_message.message_id)
-                        message_text = f"{chat_id}"
-                        message_text += "\n" + f"Username : @{data[0] if data[0] else 'No Username'}"
-                        message_text += "\n" + f"Score : {int(data[1])}"
-                        message_text += "\n" + f"Date : {shamsi_date}"
+                        message_text = ""
+                        message_text += "آیدی عددی : " + f"<a href=\"tg://user?id={chat_id}\">{chat_id}</a>"
+                        message_text += "\n" + f"یوزرنیم : {'@' + data[0] if data[0] else 'ندارد'}"
+                        message_text += "\n" + f"نمره : {int(data[1])}"
+                        message_text += "\n" + f"تاریخ : {shamsi_date}"
 
             await update.effective_message.reply_text(message_text, parse_mode=ParseMode.HTML, reply_to_message_id=update.effective_message.message_id)
         raise ApplicationHandlerStop()

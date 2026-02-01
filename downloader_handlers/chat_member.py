@@ -96,6 +96,10 @@ class ChatMember:
 
         with Database.get_session() as session:
             link = CRUDLink.get_by_url(session, invite_link)
+
+            if not link:
+                return
+
             ad = CRUDAd.get_by_id(session, link.ad_id)
             if ad.status != AdStatus.ACTIVE:
                 return
@@ -113,42 +117,72 @@ class ChatMember:
             min_60_count = count_recent_joins_minutes(times, 60)
 
             num = 25
-            has_flag = False
             message_text = "⚠️ هشدار" + "\n\n"
+            has_warning = False
             if sec_10_count > num:
                 message_text += " لینک به آدرس زیر تعداد" + str(sec_10_count) + " در 10 ثانیه عضو شده اند"
-                has_flag = True
-            elif min_1_count > num * 6:
+                message_text += "\n" + invite_link + "\n\n" + "برای بررسی بیشتر از قسمت مدیریت لینک جزئیات رو مشاهده کنید."
+                has_warning = True
+                if datetime.datetime.now() - link.updated_at >= datetime.timedelta(minutes=5):
+                    for admin in admins:
+                        session_admin = CRUDSession.get_by_account_id(session, admin.id)
+                        user = CRUDDownloaderUser.get_by_id(session, session_admin[0].downloader_user_id)
+                        await context.bot.send_message(chat_id=user.chat_id, text=message_text, parse_mode=ParseMode.HTML)
+            if min_1_count > num * 6:
                 message_text += " لینک به آدرس زیر تعداد" + str(min_1_count) + " در 1 دقیقه عضو شده اند"
-                has_flag = True
-            elif min_5_count > num * 6 * 5:
+                message_text += "\n" + invite_link + "\n\n" + "برای بررسی بیشتر از قسمت مدیریت لینک جزئیات رو مشاهده کنید."
+                has_warning = True
+                if datetime.datetime.now() - link.updated_at >= datetime.timedelta(minutes=5):
+                    for admin in admins:
+                        session_admin = CRUDSession.get_by_account_id(session, admin.id)
+                        user = CRUDDownloaderUser.get_by_id(session, session_admin[0].downloader_user_id)
+                        await context.bot.send_message(chat_id=user.chat_id, text=message_text, parse_mode=ParseMode.HTML)
+            if min_5_count > num * 6 * 5:
                 message_text += " لینک به آدرس زیر تعداد" + str(min_5_count) + " در 5 دقیقه عضو شده اند"
-                has_flag = True
-            elif min_30_count > num * 6 * 30:
+                message_text += "\n" + invite_link + "\n\n" + "برای بررسی بیشتر از قسمت مدیریت لینک جزئیات رو مشاهده کنید."
+                has_warning = True
+                if datetime.datetime.now() - link.updated_at >= datetime.timedelta(minutes=5):
+                    for admin in admins:
+                        session_admin = CRUDSession.get_by_account_id(session, admin.id)
+                        user = CRUDDownloaderUser.get_by_id(session, session_admin[0].downloader_user_id)
+                        await context.bot.send_message(chat_id=user.chat_id, text=message_text, parse_mode=ParseMode.HTML)
+            if min_30_count > num * 6 * 30:
                 message_text += " لینک به آدرس زیر تعداد" + str(min_30_count) + " در 30 دقیقه عضو شده اند"
-                has_flag = True
-            elif min_60_count > num * 6 * 60:
+                message_text += "\n" + invite_link + "\n\n" + "برای بررسی بیشتر از قسمت مدیریت لینک جزئیات رو مشاهده کنید."
+                has_warning = True
+                if datetime.datetime.now() - link.updated_at >= datetime.timedelta(minutes=5):
+                    for admin in admins:
+                        session_admin = CRUDSession.get_by_account_id(session, admin.id)
+                        user = CRUDDownloaderUser.get_by_id(session, session_admin[0].downloader_user_id)
+                        await context.bot.send_message(chat_id=user.chat_id, text=message_text, parse_mode=ParseMode.HTML)
+            if min_60_count > num * 6 * 60:
                 message_text += " لینک به آدرس زیر تعداد" + str(min_60_count) + " در 60 دقیقه عضو شده اند"
-                has_flag = True
+                message_text += "\n" + invite_link + "\n\n" + "برای بررسی بیشتر از قسمت مدیریت لینک جزئیات رو مشاهده کنید."
+                has_warning = True
+                if datetime.datetime.now() - link.updated_at >= datetime.timedelta(minutes=5):
+                    for admin in admins:
+                        session_admin = CRUDSession.get_by_account_id(session, admin.id)
+                        user = CRUDDownloaderUser.get_by_id(session, session_admin[0].downloader_user_id)
+                        await context.bot.send_message(chat_id=user.chat_id, text=message_text, parse_mode=ParseMode.HTML)
 
-            message_text += "\n" + invite_link + "\n\n" + "برای بررسی بیشتر از قسمت مدیریت لینک جزئیات رو مشاهده کنید."
-            if has_flag:
+            if has_warning:
                 CRUDLink.update_has_warning(session, link.id, True)
-                for admin in admins:
-                    session_admin = CRUDSession.get_by_account_id(session, admin.id)
-                    user = CRUDDownloaderUser.get_by_id(session, session_admin[0].downloader_user_id)
-                    await context.bot.send_message(chat_id=user.chat_id, text=message_text, parse_mode=ParseMode.HTML)
 
     @staticmethod
     async def __check_completed(update: Update, context: CallbackContext, invite_link: str):
         with Database.get_session() as session:
             link = CRUDLink.get_by_url(session, invite_link)
+
+            if not link:
+                return
+
             ad = CRUDAd.get_by_id(session, link.ad_id)
             if ad.status != AdStatus.ACTIVE:
                 return
             all_ad_links = CRUDLink.get_by_ad_id(session, ad.id)
-
+            full_value = 0
             count = 0
+
             for ad_link in all_ad_links:
                 count += ad_link.count
 
@@ -161,12 +195,12 @@ class ChatMember:
                         top_links = CRUDLink.get_top_by_ad_id(session, ad.id, len(ad.prize.keys()))  # NOQA
                     else:
                         top_links = []
-
+                    flag = False
                     for ad_link in all_ad_links:
                         new_balance = (ad_link.count * ad.rate) / 100
                         if top_links:
                             number = 1
-                            flag = False
+
                             for top_link in top_links:
                                 if ad_link.id == top_link.id:
                                     for key, value in ad.prize.items():  # NOQA
@@ -189,9 +223,13 @@ class ChatMember:
                             await context.bot.send_message(chat_id=user.chat_id, text=text)
                         except Exception as e:
                             pass
+                        full_value += new_balance
+                        await context.bot.revoke_chat_invite_link(chat_id=ad.channel_chat_id, invite_link=ad_link.url)
 
                     admins = CRUDAccount.get_by_role(session, AccountRole.ADMIN)
-                    message_text = "✅ حسابرسی تبلیغ " + str(ad.id) + " به طور خودکار انجام شد."
+                    message_text = "✅ حسابرسی تبلیغ " + str(ad.id) + " به طور خوکار انجام شد."
+                    message_text += "\n\n" + "میزان مبلغ اضافه شده به موجودی ها : " + NumberTools.format_number(full_value) + " تومان"
+                    message_text += "\n\n" + "تعداد افراد مشارکت کرده در تبلیغ : " + NumberTools.format_number(len(all_ad_links)) + " نفر"
                     for admin in admins:
                         session_admin = CRUDSession.get_by_account_id(session, admin.id)
                         user = CRUDDownloaderUser.get_by_id(session, session_admin[0].downloader_user_id)
